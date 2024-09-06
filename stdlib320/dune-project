@@ -5,7 +5,7 @@
 (generate_opam_files true)
 
 (source
- (github username/reponame))
+ (github alvinz23/cs320-fall-2024-private))
 
 (package
  (name stdlib320)
