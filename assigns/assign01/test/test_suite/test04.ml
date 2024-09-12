@@ -1,4 +1,4 @@
-(* open OUnit2
+open OUnit2
 open Assign01_04
 
 let test s e =
@@ -21,6 +21,6 @@ let tests =
     ; test 8 "[3]"
     ; test (2 * 3 * 5 * 7 * 11) "[1; 1; 1; 1; 1]"
     ; test 1058400 "[5; 3; 2; 2]"
-    ] *)
+    ]
 
   
