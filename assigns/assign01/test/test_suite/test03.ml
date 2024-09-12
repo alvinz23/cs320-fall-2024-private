@@ -1,4 +1,5 @@
-(* open OUnit2
+
+open OUnit2
 open Assign01_03
 
 let test s i e =
@@ -26,4 +27,4 @@ let tests =
     ; test 1058400 1 3
     ; test 1058400 2 2
     ; test 1058400 3 2
-    ] *)
+    ]
