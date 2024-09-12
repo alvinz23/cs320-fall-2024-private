@@ -1,4 +1,3 @@
-(* Assuming nth_prime is defined in Assign00_02 *)
 let is_prime n =
   if n < 2 then
     false
