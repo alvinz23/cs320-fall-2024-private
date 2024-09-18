@@ -1,3 +1,4 @@
+(* test01.ml *)
 open OUnit2
 open Assign00_01
 
@@ -21,4 +22,8 @@ let test_examples = "Basic sqrt Examples" >:::
   ; test_example 2 2
   ; test_example 10 4
   ; test_example 99 10
+  ; test_example 7 3  (* Add this line *)
+  ; test_example 9 3  (* Add this line *)
   ]
+
+let _ = run_test_tt_main test_examples
