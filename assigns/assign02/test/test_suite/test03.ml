@@ -1,4 +1,4 @@
-(* 
+
 open OUnit2
 open Assign02_03
 
@@ -26,4 +26,4 @@ let tests =
     [ test p1 "p1" 0.
     ; test p2 "p2" (sqrt 10.)
     ; test p3 "p3" (sqrt (9. +. 16.))
-    ] *)
+    ]
