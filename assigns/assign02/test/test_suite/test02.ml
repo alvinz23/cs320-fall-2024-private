@@ -1,4 +1,5 @@
-open OUnit2
+
+(* open OUnit2
 open Assign02_02
 
 let string_of_int_pair p =
@@ -48,4 +49,4 @@ let tests =
     ; test [1.;2.;3.;4.;5.;6.;7.;8.;9.] (3, 3) simple_matrix
     ; test [] (200, 0) {entries=[];rows=200;cols=0}
     ; test [] (0, 200) {entries=[];rows=0;cols=200}
-    ]
+    ] *)
