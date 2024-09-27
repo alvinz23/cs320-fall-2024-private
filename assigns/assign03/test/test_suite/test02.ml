@@ -1,3 +1,4 @@
+
 open OUnit2
 open Assign03_02
 
@@ -21,8 +22,11 @@ let test_tail_rec =
 
 let tests =
   "basic gen_fib examples" >:::
-    [ test [1;1] "fib" 7 [1;1;2;3;5;8;13;21]
-    ; test [1;2;3] "[1;2;3]" 7 [1;2;3;6;11;20;37;68]
+    [ 
+    test [1;1] "fib" 7 [1;1;2;3;5;8;13;21]
+     ;test [1;2;3] "[1;2;3]" 7 [1;2;3;6;11;20;37;68]
     ; test [0;0;0] "zeros" 7 [0;0;0;0;0;0;0;0]
     ; test_tail_rec
     ]
+
+    

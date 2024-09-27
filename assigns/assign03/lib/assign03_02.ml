@@ -2,16 +2,29 @@
 open Stdlib320
 let rec sum lst =
   match lst with
-  | [] -> 0  (* Base case: The sum of an empty list is 0 *)
-  | x :: xs -> x + sum xs  (* Recursive case: sum the head with the sum of the tail *)
-(*helper func to sum up the list*)
+  | [] -> 0  
+  | h :: t -> h + sum t  
 
-let gen_fib (genList : int list) k =
-  let rec solve (newList : int list) numberOfTimes i =
-    if i = numberOfTimes then sum newList 
-    else if i < List.length newList then solve newList numberOfTimes (i + 1)
-    else 
-      let newSum = sum newList in
-      solve (List.drop 1 newList @ [newSum]) numberOfTimes (i + 1)
-  in
-  solve genList k 0
+  let gen_fib genList k =
+    let lengthOfList = List.length genList in
+    let rec getKth lst currentIndex =
+      match lst with
+      | [] -> 0 
+      | h :: t -> if currentIndex = 0 then h else getKth t (currentIndex - 1)
+    in
+    if k < lengthOfList then
+      getKth genList k
+    else
+      let rec gen i acc =
+        match acc with
+        | [] -> 0 
+        | h :: _ ->
+          if i = k then
+            h  
+          else
+            let lastTerms = List.take lengthOfList acc in
+            let sum = sum lastTerms in
+            gen (i + 1) (sum :: acc)
+      in
+      gen (lengthOfList - 1) (List.rev genList)
+  
