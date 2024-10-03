@@ -1,4 +1,5 @@
 
+open Stdlib320
 
 let solve funcs start pred = 
   let rec wrap start funcs pred steps limit = 
@@ -19,7 +20,9 @@ in match steps with
   | Some _ -> checkDuplicate maxVal t count infCount start pred
 
 
-  let last_function_standing funcs start pred = 
+  let last_function_standing funcs start pred =
+    if List.length funcs = 0 then None 
+    else
     let rec helpSolve funcs maxVal maxFunc = 
       match funcs with 
       | [] -> if checkDuplicate maxVal funcs 0 0 start pred then Some maxFunc else None  (* Base case: no more functions to check *)

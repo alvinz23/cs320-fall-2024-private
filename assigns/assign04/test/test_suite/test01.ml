@@ -36,15 +36,15 @@ let g3 n = 2 * n + 1000
 let basic_examples =
   "basic last_function_standing examples" >:::
     [ test ((>) 0) 10 [f1;f2;f3] "[f1;f2;f3]" (Some f3)
-    ; test ((>) 0) 10 [f1;f2] "[f1;f2]" (Some f1)
-    (* ; test ((>) 0) 10 [] "[]" None *)
+    ; test ((>) 0) 10 [f1;f2] "[f1;f2]" (Some f1) 
+      ; test ((>) 0) 10 [] "[]" None 
     (* ; test ((>) 0) 10 [f1;f1] "[f1;f1]" None  *)
     ; test ((>) 0) 10 [f2;f3] "[f2;f3]" (Some f3)
     ; test ((<) 1000000) 2 [g1;g2;g3] "[g1;g2;g3]" (Some g3)
-    ; test ((<) 1000000) 2 [g1;g2] "[g1;g2]" (Some g1)
+     ; test ((<) 1000000) 2 [g1;g2] "[g1;g2]" (Some g1)
     ; test ((<) 1000000) 2 [g1;g3] "[g1;g3]" (Some g3)
-    ; test ((<) 5000) 2 [g1;g3] "[g1;g3]" (Some g1)
-    (* ; test ((<) 3000) 10 [g1;g3] "[g1;g3]" None *)
+    ; test ((<) 5000) 2 [g1;g3] "[g1;g3]" (Some g1) 
+      (* ; test ((<) 3000) 10 [g1;g3] "[g1;g3]" None   *)
     ; test ((<) 123123) 123123 [g1] "[g1]" (Some g1)
     ]
 
