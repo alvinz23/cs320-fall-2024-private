@@ -1,7 +1,5 @@
 
 
-(* Corrected solve function *)
-(* Your solve function remains the same *)
 let solve funcs start pred = 
   let rec wrap start funcs pred steps limit = 
     if steps > limit then 
@@ -10,9 +8,8 @@ let solve funcs start pred =
     else 
       let newVal = funcs start in 
       wrap newVal funcs pred (steps + 1) limit
-  in wrap start funcs pred 0 950
+  in wrap start funcs pred 0 99999
 
-(* Corrected checkDuplicate function *)
 let rec checkDuplicate maxVal funcs count infCount start pred = 
   match funcs with 
   | [] -> count < 2 && infCount < 2
