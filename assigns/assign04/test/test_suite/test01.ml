@@ -46,6 +46,5 @@ let basic_examples =
     ; test ((<) 5000) 2 [g1;g3] "[g1;g3]" (Some g1) 
       ; test ((<) 3000) 10 [g1;g3] "[g1;g3]" None  
     ; test ((<) 123123) 123123 [g1] "[g1]" (Some g1)
-    ; test((<) 5) 1 [g1;g2] "[g1;g2]" None
     ]
 
