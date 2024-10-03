@@ -1,4 +1,6 @@
-(* open OUnit2
+
+
+open OUnit2
 open Assign04_03
 
 let test exp e =
@@ -24,4 +26,4 @@ let basic_examples =
   ; test (Add (Num 2, Num 3)) (VNum 5)
   ; test (Add (Num 2, IfThenElse (Or (True, False), Num (-2), Add (Num 2, Num 3)))) (VNum 0)
   ; test (IfThenElse (False, Or (True, False), Or (False, False))) (VBool false)
-  ] *)
+  ]

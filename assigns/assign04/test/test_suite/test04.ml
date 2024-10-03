@@ -1,4 +1,4 @@
-(* open OUnit2
+open OUnit2
 open Assign04_04
 
 let test d (ctxt, exp) e =
@@ -73,4 +73,4 @@ let basic_examples =
   ; test "testing t4" t4 None
   ; test "testing t5" t5 (Some Int)
   ]
- *)
+
