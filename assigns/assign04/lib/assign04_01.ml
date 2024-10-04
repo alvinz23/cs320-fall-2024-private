@@ -8,7 +8,7 @@ let solve funcs start pred =
     else 
       let newVal = funcs start in 
       wrap newVal funcs pred (steps + 1) limit
-  in wrap start funcs pred 0 99999
+  in wrap start funcs pred 0 9999
 
 let rec checkDuplicate maxVal funcs count infCount start pred hasInfinite = 
   match funcs with 
