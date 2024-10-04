@@ -23,7 +23,7 @@ let rec checkDuplicate maxVal funcs count infCount start pred hasInfinite =
             else checkDuplicate maxVal t count (infCount + 1) start pred hasInfinite
           else
             checkDuplicate maxVal t count (infCount + 1) start pred hasInfinite
-      | Some s when hasInfinite -> 
+      | Some _ when hasInfinite -> 
           checkDuplicate maxVal t count infCount start pred hasInfinite
       | Some s when s = maxVal -> 
           if (count + 1) = 2 then false 
@@ -44,7 +44,7 @@ let last_function_standing funcs start pred =
           match steps with
           | None -> 
               helpSolve t maxVal func true
-          | Some s when hasInfinite ->  
+          | Some _ when hasInfinite ->  
               helpSolve t maxVal maxFunc hasInfinite
           | Some s when s > maxVal ->  
               helpSolve t s func hasInfinite  
