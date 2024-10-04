@@ -8,40 +8,48 @@ let solve funcs start pred =
     else 
       let newVal = funcs start in 
       wrap newVal funcs pred (steps + 1) limit
-  in wrap start funcs pred 0 9999999
-let rec checkDuplicate maxVal funcs count infCount start pred = 
+  in wrap start funcs pred 0 999
+
+let rec checkDuplicate maxVal funcs count infCount start pred hasInfinite = 
   match funcs with 
-  | [] -> count < 2 && infCount < 2
+  | [] -> 
+      if hasInfinite then infCount < 2 else count < 2
   | h :: t -> 
       let (steps, _) = solve h start pred in
       match steps with 
       | None -> 
-          if (infCount + 1) = 2 then false 
-          else checkDuplicate maxVal t count (infCount + 1) start pred 
+          if hasInfinite then
+            if (infCount + 1) = 2 then false 
+            else checkDuplicate maxVal t count (infCount + 1) start pred hasInfinite
+          else
+            checkDuplicate maxVal t count (infCount + 1) start pred hasInfinite
+      | Some s when hasInfinite -> 
+          checkDuplicate maxVal t count infCount start pred hasInfinite
       | Some s when s = maxVal -> 
           if (count + 1) = 2 then false 
-          else checkDuplicate maxVal t (count + 1) infCount start pred
+          else checkDuplicate maxVal t (count + 1) infCount start pred hasInfinite
       | Some _ -> 
-          checkDuplicate maxVal t count infCount start pred
-
+          checkDuplicate maxVal t count infCount start pred hasInfinite
 
 let last_function_standing funcs start pred =
   if List.length funcs = 0 then None 
   else
     let orig_funcs = funcs in 
-    let rec helpSolve funcs maxVal maxFunc = 
+    let rec helpSolve funcs maxVal maxFunc hasInfinite = 
       match funcs with 
       | [] -> 
-          if checkDuplicate maxVal orig_funcs 0 0 start pred then Some maxFunc else None
+          if checkDuplicate maxVal orig_funcs 0 0 start pred hasInfinite then Some maxFunc else None
       | h :: t -> 
           let (steps, func) = solve h start pred in 
           match steps with
           | None -> 
-              helpSolve t maxVal maxFunc  
+              helpSolve t maxVal func true
+          | Some s when hasInfinite ->  
+              helpSolve t maxVal maxFunc hasInfinite
           | Some s when s > maxVal ->  
-              helpSolve t s func  
+              helpSolve t s func hasInfinite  
           | Some s when s = maxVal ->  
-              helpSolve t maxVal maxFunc
+              helpSolve t maxVal maxFunc hasInfinite
           | Some _ ->  
-              helpSolve t maxVal maxFunc  
-    in helpSolve funcs (-1) (fun x -> x) 
+              helpSolve t maxVal maxFunc hasInfinite  
+    in helpSolve funcs (-1) (fun x -> x) false
