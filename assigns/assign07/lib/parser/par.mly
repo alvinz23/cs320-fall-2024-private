@@ -3,8 +3,6 @@
   open Utils
 %}
 
-%module-name Par
-
 %token IF THEN ELSE
 %token LET EQUAL IN
 %token FUN ARROW
@@ -17,7 +15,7 @@
 %token <string> VAR
 %token EOF
 
-%start <prog> prog
+%start <Utils.prog> prog
 
 %right OR
 %right AND

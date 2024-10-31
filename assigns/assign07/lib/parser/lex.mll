@@ -1,4 +1,4 @@
-/* lib/parser/lex.mll */
+
 
 {
   open Par
