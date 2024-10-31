@@ -1,7 +1,9 @@
 
+
 %{
   open Utils
 %}
+
 
 %token IF THEN ELSE
 %token LET EQUAL IN
@@ -15,7 +17,7 @@
 %token <string> VAR
 %token EOF
 
-%start <Utils.prog> prog
+%start <prog> prog
 
 %right OR
 %right AND
@@ -46,8 +48,8 @@ expr3:
   | UNIT { Unit }
   | TRUE { True }
   | FALSE { False }
-  | NUM n { Num n }
-  | VAR v { Var v }
+  | NUM { Num $1 }
+  | VAR { Var $1 }
   | LPAREN expr RPAREN { $2 }
 
 bop:
