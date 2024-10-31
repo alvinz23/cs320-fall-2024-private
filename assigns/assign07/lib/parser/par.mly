@@ -1,5 +1,6 @@
 
 
+
 %{
   open Utils
 %}
@@ -28,7 +29,7 @@
 %%
 
 prog:
-  | expr EOF { Some $1 }
+  | expr EOF { $1 }
 
 expr:
   | IF expr THEN expr ELSE expr { If ($2, $4, $6) }
