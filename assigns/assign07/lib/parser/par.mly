@@ -1,69 +1,81 @@
 
 
 
+
 %{
-  open Utils
+open Utils
 %}
 
-
-%token IF THEN ELSE
-%token LET EQUAL IN
-%token FUN ARROW
-%token AND OR
-%token PLUS MINUS TIMES DIVIDE MOD
-%token LT LEQ GT GEQ EQ NEQ
+%token IF THEN ELSE LET IN FUN MOD TRUE FALSE
+%token ARROW
 %token LPAREN RPAREN
-%token TRUE FALSE UNIT
+%token UNIT
+%token AND OR
+%token LT LTE GT GTE EQ NEQ
+%token PLUS MINUS TIMES DIVIDE
 %token <int> NUM
 %token <string> VAR
 %token EOF
 
-%start <prog> prog
-
 %right OR
 %right AND
-%left LT LEQ GT GEQ EQ NEQ
+%left LT LTE GT GTE EQ NEQ
 %left PLUS MINUS
 %left TIMES DIVIDE MOD
+%left APP
+
+%start <Utils.prog> prog
 
 %%
 
 prog:
-  | expr EOF { $1 }
+  expr EOF { $1 }
 
 expr:
   | IF expr THEN expr ELSE expr { If ($2, $4, $6) }
-  | LET VAR EQUAL expr IN expr { Let ($2, $4, $6) }
+  | LET VAR EQ expr IN expr { Let ($2, $4, $6) }
   | FUN VAR ARROW expr { Fun ($2, $4) }
+  | expr1 { $1 }
+
+expr1:
+  | expr1 OR expr2 { Bop (Or, $1, $3) }
   | expr2 { $1 }
 
 expr2:
-  | expr2 bop expr2 { Bop ($2, $1, $3) }
-  | expr_app { $1 }
-
-expr_app:
-  | expr_app expr3 { App ($1, $2) }
+  | expr2 AND expr3 { Bop (And, $1, $3) }
   | expr3 { $1 }
 
 expr3:
+  | expr3 relop expr4 { Bop ($2, $1, $3) }
+  | expr4 { $1 }
+
+expr4:
+  | expr4 PLUS expr5 { Bop (Add, $1, $3) }
+  | expr4 MINUS expr5 { Bop (Sub, $1, $3) }
+  | expr5 { $1 }
+
+expr5:
+  | expr5 TIMES expr6 { Bop (Mul, $1, $3) }
+  | expr5 DIVIDE expr6 { Bop (Div, $1, $3) }
+  | expr5 MOD expr6 { Bop (Mod, $1, $3) }
+  | expr6 { $1 }
+
+expr6:
+  | expr6 expr7 %prec APP { App ($1, $2) }
+  | expr7 { $1 }
+
+expr7:
+  | LPAREN expr RPAREN { $2 }
   | UNIT { Unit }
   | TRUE { True }
   | FALSE { False }
   | NUM { Num $1 }
   | VAR { Var $1 }
-  | LPAREN expr RPAREN { $2 }
 
-bop:
-  | PLUS { Add }
-  | MINUS { Sub }
-  | TIMES { Mul }
-  | DIVIDE { Div }
-  | MOD { Mod }
+relop:
   | LT { Lt }
-  | LEQ { Lte }
+  | LTE { Lte }
   | GT { Gt }
-  | GEQ { Gte }
+  | GTE { Gte }
   | EQ { Eq }
   | NEQ { Neq }
-  | AND { And }
-  | OR { Or }
