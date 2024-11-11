@@ -1,6 +1,13 @@
 (library
+
  (name my_parser)
- (libraries utils stdlib320)
- (modules lex par my_parser)
- (wrapped false)
- (flags (:standard -nopervasives -nostdlib -open Stdlib320)))
+
+ (public_name my_parser)
+
+ (libraries utils))
+
+(menhir (modules par))
+
+(ocamllex lex)
+
+
