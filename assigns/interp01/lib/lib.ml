@@ -1,16 +1,11 @@
 
 
-Open Utils
-Open Lex
-Open Par 
+open Utils
+open Parser  
 
 
-let parse s =
 
-  try Some (Par.prog Lex.read (Lexing.from_string s))
-
-  with _ -> None
-
+let parse = Parser.parse
 
   let rec occurs_in_value y v =
   match v with
