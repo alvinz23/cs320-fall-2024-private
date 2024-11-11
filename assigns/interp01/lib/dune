@@ -1,5 +1,5 @@
 (library
  (name lib)
- (public_name lib)
+ (public_name interp01.lib)
  (libraries parser utils stdlib320)
  (flags (:standard -nopervasives -nostdlib -open Stdlib320)))

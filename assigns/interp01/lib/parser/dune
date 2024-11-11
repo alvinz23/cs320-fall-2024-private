@@ -1,7 +1,6 @@
 (library
  (name parser)
- (public_name parser)
  (libraries utils stdlib320)
  (modules lex par parser)
- (flags (:standard -nopervasives -nostdlib -open Stdlib320))
- (wrapped false))
+ (wrapped false)
+ (flags (:standard -nopervasives -nostdlib -open Stdlib320)))
