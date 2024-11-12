@@ -1,11 +1,10 @@
 
 
+
 open Utils
-open Parser  
+open My_parser  
 
-
-
-let parse = Parser.parse
+let parse = My_parser.parse
 
   let rec occurs_in_value y v =
   match v with
