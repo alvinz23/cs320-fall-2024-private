@@ -1,5 +1,3 @@
-
-
 %{
 open Utils
 %}
@@ -15,12 +13,7 @@ open Utils
 %token <string> VAR
 %token EOF
 
-%right OR
-%right AND
-%left LT LTE GT GTE EQ NEQ
-%left PLUS MINUS
-%left TIMES DIVIDE MOD
-%left APP
+
 
 %start <Utils.prog> prog
 
