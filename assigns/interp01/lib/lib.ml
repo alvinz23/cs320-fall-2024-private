@@ -1,15 +1,20 @@
-
-
-
 open Utils
 open Stdlib320
-open My_parser  
+open My_parser
 
-  
+let gensym_var () =
+  let y' = gensym () in
+  let y'' =
+    if String.get y' 0 = '$' then
+      "x" ^ String.sub y' 1 (String.length y' - 1)
+    else
+      y'
+  in
+  y''
 
 let parse = My_parser.parse
 
-  let rec occurs_in_value y v =
+let rec occurs_in_value y v =
   match v with
   | VNum _ -> false
   | VBool _ -> false
@@ -30,7 +35,6 @@ and occurs_in_expr y e =
       if z = y then false else occurs_in_expr y e1
   | App (e1, e2) -> occurs_in_expr y e1 || occurs_in_expr y e2
 
-
 let value_to_expr v =
   match v with
   | VNum n -> Num n
@@ -41,7 +45,7 @@ let value_to_expr v =
 let rec subst_var y y' e =
   match e with
   | Num _ | True | False | Unit -> e
-| Var z -> if z = y then Var y' else Var z
+  | Var z -> if z = y then Var y' else Var z
   | Bop (op, e1, e2) -> Bop (op, subst_var y y' e1, subst_var y y' e2)
   | If (e1, e2, e3) -> If (subst_var y y' e1, subst_var y y' e2, subst_var y y' e3)
   | Let (z, e1, e2) ->
@@ -67,7 +71,7 @@ let rec subst v x e =
       if y = x then
         Let (y, subst v x e1, e2)
       else if occurs_in_value y v then
-        let y' = gensym_var () in  
+        let y' = gensym_var () in
         let e2' = subst_var y y' e2 in
         Let (y', subst v x e1, subst v x e2')
       else
@@ -76,7 +80,7 @@ let rec subst v x e =
       if y = x then
         Fun (y, e1)
       else if occurs_in_value y v then
-        let y' = gensym_var () in  (* And here *)
+        let y' = gensym_var () in
         let e1' = subst_var y y' e1 in
         Fun (y', subst v x e1')
       else
