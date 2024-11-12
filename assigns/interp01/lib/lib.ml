@@ -5,6 +5,9 @@ open Utils
 open My_parser  
 
 
+let counter = ref 0 
+
+
 let gensym x =
   let c = !counter in
   counter := c + 1;

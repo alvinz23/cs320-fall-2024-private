@@ -20,7 +20,7 @@ open Utils
 %token LT LTE GT GTE EQ NEQ
 
 %token PLUS MINUS TIMES DIVIDE
-
+%token APP
 %token <int> NUM
 
 %token <string> VAR
@@ -29,7 +29,6 @@ open Utils
 
 
 
-%left APP
 
 
 %start <Utils.prog> prog
