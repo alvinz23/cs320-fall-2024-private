@@ -2,16 +2,12 @@ open Utils
 open Stdlib320
 open My_parser
 
-let gensym_var () =
-  let y' = gensym () in
-  let y'' =
-    if Stdlib.String.get y' 0 = '$' then
-      "x" ^ Stdlib.String.sub y' 1 (Stdlib.String.length y' - 1)
-    else
-      y'
-  in
-  y''
-
+let gensym_var =
+  let count = ref 0 in
+  fun () ->
+    let out = "x" ^ string_of_int !count in
+    count := !count + 1;
+    out
 
 let parse = My_parser.parse
 
@@ -52,12 +48,12 @@ let rec subst_var y y' e =
   | Let (z, e1, e2) ->
       let e1' = subst_var y y' e1 in
       if z = y then
-        Let (z, e1', e2)  (* `z` shadows `y`, so do not substitute in `e2` *)
+        Let (z, e1', e2)
       else
         Let (z, e1', subst_var y y' e2)
   | Fun (z, e1) ->
       if z = y then
-        Fun (z, e1)  (* `z` shadows `y` *)
+        Fun (z, e1)
       else
         Fun (z, subst_var y y' e1)
   | App (e1, e2) -> App (subst_var y y' e1, subst_var y y' e2)
@@ -87,7 +83,6 @@ let rec subst v x e =
       else
         Fun (y, subst v x e1)
   | App (e1, e2) -> App (subst v x e1, subst v x e2)
-
 
 
 let rec eval e =
