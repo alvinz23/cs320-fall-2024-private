@@ -1,6 +1,5 @@
 open Utils
 open Stdlib320
-open My_parser
 
 type 'a myref = { mutable contents : 'a }
 
@@ -15,7 +14,8 @@ let gensym_var =
     myset count (n + 1);
     "x" ^ string_of_int n
 
-let parse = My_parser.parse
+let parse = string -> prog option = 
+fun s -> My_parser.parse s 
 
 let rec occurs_in_value y v =
   match v with
@@ -220,8 +220,7 @@ let rec eval e =
       | Error e, _ -> Error e
       | _, Error e -> Error e
       | Ok val1, Ok val2 ->
-          Ok (VBool (val1 = val2))
-      | _, _ -> Error (InvalidArgs Eq))
+          Ok (VBool (val1 = val2)))
 
   | Bop (Neq, e1, e2) ->
       let v1 = eval e1 in
@@ -231,7 +230,7 @@ let rec eval e =
       | _, Error e -> Error e
       | Ok val1, Ok val2 ->
           Ok (VBool (val1 <> val2))
-      | _, _ -> Error (InvalidArgs Neq))
+      )
 
   | If (e1, e2, e3) ->
       let cond = eval e1 in
