@@ -93,11 +93,8 @@ expr5:
 
   | expr6 { $1 }
 
-
 expr6:
-
-  | expr6 expr7 %prec APP { App ($1, $2) }
-
+  | expr6 expr7 { App ($1, $2) }
   | expr7 { $1 }
 
 
