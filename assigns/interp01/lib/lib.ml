@@ -2,12 +2,18 @@ open Utils
 open Stdlib320
 open My_parser
 
+type 'a myref = { mutable contents : 'a }
+
+let myref x = { contents = x }
+let myget r = r.contents
+let myset r x = r.contents <- x
+
 let gensym_var =
-  let count = ref 0 in
+  let count = myref 0 in
   fun () ->
-    let out = "x" ^ string_of_int !count in
-    count := !count + 1;
-    out
+    let n = myget count in
+    myset count (n + 1);
+    "x" ^ string_of_int n
 
 let parse = My_parser.parse
 
