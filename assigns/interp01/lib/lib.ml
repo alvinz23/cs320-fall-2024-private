@@ -14,7 +14,7 @@ let gensym_var =
     myset count (n + 1);
     "x" ^ string_of_int n
 
-let parse = string -> prog option = 
+let parse : string -> prog option = 
 fun s -> My_parser.parse s 
 
 let rec occurs_in_value y v =
