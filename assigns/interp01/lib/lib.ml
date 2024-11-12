@@ -2,17 +2,9 @@
 
 
 open Utils
-open Stdlib
+open Stdlib320
 open My_parser  
 
-
-let counter = ref 0 
-
-
-let gensym x =
-  let c = !counter in
-  counter := c + 1;
-  x ^ string_of_int c
   
 
 let parse = My_parser.parse

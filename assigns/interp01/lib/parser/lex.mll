@@ -12,7 +12,7 @@ let digit = ['0'-'9']
 
 let num = '-'? digit+
 
-let var = ['a'-'z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_' '\'']*
+let var = [ '$' 'a'-'z' '_' ] [ 'a'-'z' 'A'-'Z' '0'-'9' '_' '\'' ]*
 
 
 rule read =
