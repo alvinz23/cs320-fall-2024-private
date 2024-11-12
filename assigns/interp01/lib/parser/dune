@@ -2,8 +2,7 @@
  (name my_parser)
  (libraries utils)
  (modules lex par my_parser)
- (wrapped false)
- (flags (:standard -nostdlib -nopervasives -open Stdlib320)))
+ (wrapped false))
 
 (menhir (modules par))
 
