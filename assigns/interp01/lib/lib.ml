@@ -57,18 +57,17 @@ let rec subst_var y y' e =
         Fun (z, subst_var y y' e1)
   | App (e1, e2) -> App (subst_var y y' e1, subst_var y y' e2)
 
-
 let rec subst v x e =
   match e with
   | Num _ | True | False | Unit -> e
   | Var y -> if y = x then value_to_expr v else e
   | Bop (op, e1, e2) -> Bop (op, subst v x e1, subst v x e2)
   | If (e1, e2, e3) -> If (subst v x e1, subst v x e2, subst v x e3)
-| Let (y, e1, e2) ->
+  | Let (y, e1, e2) ->
       if y = x then
         Let (y, subst v x e1, e2)
       else if occurs_in_value y v then
-        let y' = gensym y in
+        let y' = gensym_var () in  
         let e2' = subst_var y y' e2 in
         Let (y', subst v x e1, subst v x e2')
       else
@@ -77,7 +76,7 @@ let rec subst v x e =
       if y = x then
         Fun (y, e1)
       else if occurs_in_value y v then
-        let y' = gensym y in
+        let y' = gensym_var () in  (* And here *)
         let e1' = subst_var y y' e1 in
         Fun (y', subst v x e1')
       else
