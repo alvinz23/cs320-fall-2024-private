@@ -4,6 +4,13 @@
 open Utils
 open My_parser  
 
+
+let gensym x =
+  let c = !counter in
+  counter := c + 1;
+  x ^ string_of_int c
+  
+
 let parse = My_parser.parse
 
   let rec occurs_in_value y v =
@@ -61,7 +68,7 @@ let rec subst v x e =
   | Var y -> if y = x then value_to_expr v else e
   | Bop (op, e1, e2) -> Bop (op, subst v x e1, subst v x e2)
   | If (e1, e2, e3) -> If (subst v x e1, subst v x e2, subst v x e3)
-  | Let (y, e1, e2) ->
+| Let (y, e1, e2) ->
       if y = x then
         Let (y, subst v x e1, e2)
       else if occurs_in_value y v then
