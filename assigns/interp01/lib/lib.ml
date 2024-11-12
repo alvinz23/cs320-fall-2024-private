@@ -5,12 +5,13 @@ open My_parser
 let gensym_var () =
   let y' = gensym () in
   let y'' =
-    if String.get y' 0 = '$' then
-      "x" ^ String.sub y' 1 (String.length y' - 1)
+    if Stdlib.String.get y' 0 = '$' then
+      "x" ^ Stdlib.String.sub y' 1 (Stdlib.String.length y' - 1)
     else
       y'
   in
   y''
+
 
 let parse = My_parser.parse
 
