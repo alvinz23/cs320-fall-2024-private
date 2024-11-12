@@ -101,131 +101,194 @@ let rec eval e =
   | Var x -> Error (UnknownVar x)
 
   | Bop (Add, e1, e2) ->
-      eval e1 >>= fun v1 ->
-      eval e2 >>= fun v2 ->
-      (match (v1, v2) with
-       | (VNum n1, VNum n2) -> Ok (VNum (n1 + n2))
-       | _ -> Error (InvalidArgs Add))
+      match eval e1 with
+      | Error e -> Error e
+      | Ok v1 ->
+          match eval e2 with
+          | Error e -> Error e
+          | Ok v2 ->
+              match (v1, v2) with
+              | (VNum n1, VNum n2) -> Ok (VNum (n1 + n2))
+              | _ -> Error (InvalidArgs Add)
 
+  | Bop (Sub, e1, e2) ->
+      match eval e1 with
+      | Error e -> Error e
+      | Ok v1 ->
+          match eval e2 with
+          | Error e -> Error e
+          | Ok v2 ->
+              match (v1, v2) with
+              | (VNum n1, VNum n2) -> Ok (VNum (n1 - n2))
+              | _ -> Error (InvalidArgs Sub)
+
+  | Bop (Mul, e1, e2) ->
+      match eval e1 with
+      | Error e -> Error e
+      | Ok v1 ->
+          match eval e2 with
+          | Error e -> Error e
+          | Ok v2 ->
+              match (v1, v2) with
+              | (VNum n1, VNum n2) -> Ok (VNum (n1 * n2))
+              | _ -> Error (InvalidArgs Mul)
 
   | Bop (Div, e1, e2) ->
-      eval e1 >>= fun v1 ->
-      eval e2 >>= fun v2 ->
-      (match (v1, v2) with
-       | (VNum n1, VNum n2) ->
-           if n2 = 0 then Error DivByZero
-           else Ok (VNum (n1 / n2))
-       | _ -> Error (InvalidArgs Div))
+      match eval e1 with
+      | Error e -> Error e
+      | Ok v1 ->
+          match eval e2 with
+          | Error e -> Error e
+          | Ok v2 ->
+              match (v1, v2) with
+              | (VNum n1, VNum n2) ->
+                  if n2 = 0 then Error DivByZero
+                  else Ok (VNum (n1 / n2))
+              | _ -> Error (InvalidArgs Div)
+
+  | Bop (Mod, e1, e2) ->
+      match eval e1 with
+      | Error e -> Error e
+      | Ok v1 ->
+          match eval e2 with
+          | Error e -> Error e
+          | Ok v2 ->
+              match (v1, v2) with
+              | (VNum n1, VNum n2) ->
+                  if n2 = 0 then Error DivByZero
+                  else Ok (VNum (n1 mod n2))
+              | _ -> Error (InvalidArgs Mod)
 
   | Bop (And, e1, e2) ->
-      eval e1 >>= fun v1 ->
-      (match v1 with
-       | VBool false -> Ok (VBool false)
-       | VBool true ->
-           eval e2 >>= fun v2 ->
-           (match v2 with
-            | VBool b -> Ok (VBool b)
-            | _ -> Error (InvalidArgs And))
-       | _ -> Error (InvalidArgs And))
+      match eval e1 with
+      | Error e -> Error e
+      | Ok v1 ->
+          match v1 with
+          | VBool false -> Ok (VBool false)
+          | VBool true ->
+              match eval e2 with
+              | Error e -> Error e
+              | Ok v2 ->
+                  (match v2 with
+                   | VBool b -> Ok (VBool b)
+                   | _ -> Error (InvalidArgs And))
+          | _ -> Error (InvalidArgs And)
 
   | Bop (Or, e1, e2) ->
-      eval e1 >>= fun v1 ->
-      (match v1 with
-       | VBool true -> Ok (VBool true)
-       | VBool false ->
-           eval e2 >>= fun v2 ->
-           (match v2 with
-            | VBool b -> Ok (VBool b)
-            | _ -> Error (InvalidArgs Or))
-       | _ -> Error (InvalidArgs Or))
+      match eval e1 with
+      | Error e -> Error e
+      | Ok v1 ->
+          match v1 with
+          | VBool true -> Ok (VBool true)
+          | VBool false ->
+              match eval e2 with
+              | Error e -> Error e
+              | Ok v2 ->
+                  (match v2 with
+                   | VBool b -> Ok (VBool b)
+                   | _ -> Error (InvalidArgs Or))
+          | _ -> Error (InvalidArgs Or)
 
   | Bop (Lt, e1, e2) ->
-      eval e1 >>= fun v1 ->
-      eval e2 >>= fun v2 ->
-      (match (v1, v2) with
-       | (VNum n1, VNum n2) -> Ok (VBool (n1 < n2))
-       | _ -> Error (InvalidArgs Lt))
+      match eval e1 with
+      | Error e -> Error e
+      | Ok v1 ->
+          match eval e2 with
+          | Error e -> Error e
+          | Ok v2 ->
+              match (v1, v2) with
+              | (VNum n1, VNum n2) -> Ok (VBool (n1 < n2))
+              | _ -> Error (InvalidArgs Lt)
 
+  | Bop (Lte, e1, e2) ->
+      match eval e1 with
+      | Error e -> Error e
+      | Ok v1 ->
+          match eval e2 with
+          | Error e -> Error e
+          | Ok v2 ->
+              match (v1, v2) with
+              | (VNum n1, VNum n2) -> Ok (VBool (n1 <= n2))
+              | _ -> Error (InvalidArgs Lte)
 
-       | Bop (Sub, e1, e2) ->
-    eval e1 >>= fun v1 ->
-    eval e2 >>= fun v2 ->
-    (match (v1, v2) with
-     | (VNum n1, VNum n2) -> Ok (VNum (n1 - n2))
-     | _ -> Error (InvalidArgs Sub))
+  | Bop (Gt, e1, e2) ->
+      match eval e1 with
+      | Error e -> Error e
+      | Ok v1 ->
+          match eval e2 with
+          | Error e -> Error e
+          | Ok v2 ->
+              match (v1, v2) with
+              | (VNum n1, VNum n2) -> Ok (VBool (n1 > n2))
+              | _ -> Error (InvalidArgs Gt)
 
-| Bop (Mul, e1, e2) ->
-    eval e1 >>= fun v1 ->
-    eval e2 >>= fun v2 ->
-    (match (v1, v2) with
-     | (VNum n1, VNum n2) -> Ok (VNum (n1 * n2))
-     | _ -> Error (InvalidArgs Mul))
-| Bop (Mod, e1, e2) ->
-    eval e1 >>= fun v1 ->
-    eval e2 >>= fun v2 ->
-    (match (v1, v2) with
-     | (VNum n1, VNum n2) ->
-         if n2 = 0 then Error DivByZero
-         else Ok (VNum (n1 mod n2))
-     | _ -> Error (InvalidArgs Mod))
+  | Bop (Gte, e1, e2) ->
+      match eval e1 with
+      | Error e -> Error e
+      | Ok v1 ->
+          match eval e2 with
+          | Error e -> Error e
+          | Ok v2 ->
+              match (v1, v2) with
+              | (VNum n1, VNum n2) -> Ok (VBool (n1 >= n2))
+              | _ -> Error (InvalidArgs Gte)
 
+  | Bop (Eq, e1, e2) ->
+      match eval e1 with
+      | Error e -> Error e
+      | Ok v1 ->
+          match eval e2 with
+          | Error e -> Error e
+          | Ok v2 ->
+              (* Equality can be extended to other types if needed *)
+              match (v1, v2) with
+              | (VNum n1, VNum n2) -> Ok (VBool (n1 = n2))
+              | (VBool b1, VBool b2) -> Ok (VBool (b1 = b2))
+              | _ -> Error (InvalidArgs Eq)
 
-| Bop (Lte, e1, e2) ->
-    eval e1 >>= fun v1 ->
-    eval e2 >>= fun v2 ->
-    (match (v1, v2) with
-     | (VNum n1, VNum n2) -> Ok (VBool (n1 <= n2))
-     | _ -> Error (InvalidArgs Lte))
-
-| Bop (Gt, e1, e2) ->
-    eval e1 >>= fun v1 ->
-    eval e2 >>= fun v2 ->
-    (match (v1, v2) with
-     | (VNum n1, VNum n2) -> Ok (VBool (n1 > n2))
-     | _ -> Error (InvalidArgs Gt))
-| Bop (Gte, e1, e2) ->
-    eval e1 >>= fun v1 ->
-    eval e2 >>= fun v2 ->
-    (match (v1, v2) with
-     | (VNum n1, VNum n2) -> Ok (VBool (n1 >= n2))
-     | _ -> Error (InvalidArgs Gte))
-| Bop (Eq, e1, e2) ->
-    eval e1 >>= fun v1 ->
-    eval e2 >>= fun v2 ->
-    (match (v1, v2) with
-     | (VNum n1, VNum n2) -> Ok (VBool (n1 = n2))
-     | _ -> Error (InvalidArgs Eq))
-| Bop (Neq, e1, e2) ->
-    eval e1 >>= fun v1 ->
-    eval e2 >>= fun v2 ->
-    (match (v1, v2) with
-     | (VNum n1, VNum n2) -> Ok (VBool (n1 <> n2))
-     | _ -> Error (InvalidArgs Neq))
+  | Bop (Neq, e1, e2) ->
+      match eval e1 with
+      | Error e -> Error e
+      | Ok v1 ->
+          match eval e2 with
+          | Error e -> Error e
+          | Ok v2 ->
+              (* Inequality can be extended to other types if needed *)
+              match (v1, v2) with
+              | (VNum n1, VNum n2) -> Ok (VBool (n1 <> n2))
+              | (VBool b1, VBool b2) -> Ok (VBool (b1 <> b2))
+              | _ -> Error (InvalidArgs Neq)
 
   | If (e1, e2, e3) ->
-      eval e1 >>= fun v1 ->
-      (match v1 with
-       | VBool true -> eval e2
-       | VBool false -> eval e3
-       | _ -> Error InvalidIfCond)
+      match eval e1 with
+      | Error e -> Error e
+      | Ok v1 ->
+          match v1 with
+          | VBool true -> eval e2
+          | VBool false -> eval e3
+          | _ -> Error InvalidIfCond
 
   | Let (x, e1, e2) ->
-      eval e1 >>= fun v1 ->
-      let e2' = subst v1 x e2 in
-      eval e2'
+      match eval e1 with
+      | Error e -> Error e
+      | Ok v1 ->
+          let e2' = subst v1 x e2 in
+          eval e2'
 
   | Fun (x, e) -> Ok (VFun (x, e))
 
   | App (e1, e2) ->
-      eval e1 >>= fun v1 ->
-      (match v1 with
-       | VFun (x, body) ->
-           eval e2 >>= fun v2 ->
-           let body' = subst v2 x body in
-           eval body'
-       | _ -> Error InvalidApp)
-
-
+      match eval e1 with
+      | Error e -> Error e
+      | Ok v1 ->
+          match v1 with
+          | VFun (x, body) ->
+              match eval e2 with
+              | Error e -> Error e
+              | Ok v2 ->
+                  let body' = subst v2 x body in
+                  eval body'
+          | _ -> Error InvalidApp
 
 let interp (s : string) : (value, error) result =
   match parse s with
