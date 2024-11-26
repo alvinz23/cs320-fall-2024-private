@@ -1,28 +1,48 @@
-
-
 %{
   open Utils
-  (* Helper function to construct nested applications *)
-  let rec build_application func args =
+  let rec apply func args =
     match args with
     | [] -> func
-    | arg :: rest -> build_application (SApp (func, arg)) rest
+    | head :: tail -> apply (SApp (func, head)) tail
 %}
 
-%token <string> IDENT
-%token <int> NUMBER
-%token LET REC IN IF THEN ELSE FUN ASSERT TRUE FALSE
-%token INT BOOL UNIT
-%token LPAREN RPAREN COLON EQUAL
+%token <string> VAR
+%token <int> NUM
+%token LET
+%token EQUALS
+%token IN
+%token REC
+%token COLON
+%token LPAREN
+%token RPAREN
+%token INT
+%token BOOL
+%token UNIT
 %token ARROW
-%token ADD SUB MUL DIV MOD
-%token AND OR
-%token LT LTE GT GTE EQ NEQ
+%token IF
+%token THEN
+%token ELSE
+%token ASSERT
+%token TRUE
+%token FALSE
+%token FUN
+%token MOD
+%token AND
+%token OR
+%token LT
+%token LTE
+%token GT
+%token GTE
+%token NEQ
+%token ADD
+%token SUB
+%token MUL
+%token DIV
 %token EOF
 
 %right OR
 %right AND
-%nonassoc LT LTE GT GTE EQ NEQ
+%left LT LTE GT GTE EQUALS NEQ
 %left ADD SUB
 %left MUL DIV MOD
 
@@ -31,102 +51,99 @@
 %%
 
 prog:
-    toplet_list EOF { $1 }
+  declarations EOF { $1 }
 ;
 
-toplet_list:
-{ [] }
-  | toplet_list toplet { $1 @ [$2] }
+declarations:
+  { [] }
+| declarations binding { $1 @ [$2] }
 ;
 
-toplet:
-    LET name=IDENT params=param_list_opt COLON typ=type_expr EQUAL expr=expression {
-      { is_rec = false; name; args = params; ty = typ; value = expr }
-    }
-  | LET REC name=IDENT first_param=param rest_params=param_list COLON typ=type_expr EQUAL expr=expression {
-      { is_rec = true; name; args = first_param :: rest_params; ty = typ; value = expr }
-    }
+binding:
+  LET name=VAR params=optional_parameters COLON ty=type_expression EQUALS expr_body=expression {
+    { is_rec = false; name; args = params; ty; value = expr_body }
+  }
+| LET REC name=VAR first_param=parameter additional_params=more_parameters COLON ty=type_expression EQUALS expr_body=expression {
+    { is_rec = true; name; args = first_param :: additional_params; ty; value = expr_body }
+  }
 ;
 
-param_list_opt:
-   { [] }
-  | param_list { $1 }
+optional_parameters:
+  { [] }
+| parameter_list { $1 }
 ;
 
-param_list:
-    param { [$1] }
-  | param_list param { $1 @ [$2] }
+parameter_list:
+  parameter { [$1] }
+| parameter_list parameter { $1 @ [$2] }
 ;
 
-param:
-    LPAREN name=IDENT COLON typ=type_expr RPAREN { (name, typ) }
+parameter:
+  LPAREN param_name=VAR COLON param_type=type_expression RPAREN { (param_name, param_type) }
 ;
 
-type_expr:
-    INT { IntTy }
-  | BOOL { BoolTy }
-  | UNIT { UnitTy }
-  | LPAREN type_expr RPAREN { $2 }
-  | t1=type_expr ARROW t2=type_expr { FunTy (t1, t2) }
+more_parameters:
+  { [] }
+| more_parameters parameter { $1 @ [$2] }
+;
+
+type_expression:
+  INT { IntTy }
+| BOOL { BoolTy }
+| UNIT { UnitTy }
+| from_ty=type_expression ARROW to_ty=type_expression { FunTy (from_ty, to_ty) }
+| LPAREN inner_ty=type_expression RPAREN { inner_ty }
 ;
 
 expression:
-    LET name=IDENT params=param_list_opt COLON typ=type_expr EQUAL value=expression IN body=expression {
-      SLet { is_rec = false; name; args = params; ty = typ; value; body }
-    }
-  | LET REC name=IDENT first_param=param rest_params=param_list COLON typ=type_expr EQUAL value=expression IN body=expression {
-      SLet { is_rec = true; name; args = first_param :: rest_params; ty = typ; value; body }
-    }
-  | IF condition=expression THEN true_branch=expression ELSE false_branch=expression {
-      SIf (condition, true_branch, false_branch)
-    }
-  | FUN first_param=param rest_params=param_list ARROW body=expression {
-      SFun { arg = first_param; args = rest_params; body }
-    }
-  | expr=expression_level1 { expr }
+  LET name=VAR params=optional_parameters COLON ty=type_expression EQUALS value=expression IN body=expression {
+    SLet { is_rec = false; name; args = params; ty; value = value; body = body }
+  }
+| LET REC name=VAR first_param=parameter additional_params=more_parameters COLON ty=type_expression EQUALS value=expression IN body=expression {
+    SLet { is_rec = true; name; args = first_param :: additional_params; ty; value = value; body = body }
+  }
+| IF condition=expression THEN then_branch=expression ELSE else_branch=expression {
+    SIf (condition, then_branch, else_branch)
+  }
+| FUN first_param=parameter additional_params=more_parameters ARROW func_body=expression {
+    SFun { arg = first_param; args = additional_params; body = func_body }
+  }
+| expr_lvl1 { $1 }
 ;
 
-expression_level1:
-    left=expression_level1 op=binary_operator right=expression_level1 {
-      SBop (op, left, right)
-    }
-  | ASSERT expr=expression_level2 {
-      SAssert expr
-    }
-  | func=expression_level2 args=nonempty_expr_list {
-      build_application func args
-    }
-  | expr=expression_level2 {
-      expr
-    }
+expr_lvl1:
+  expr_lvl1 operator=binary_operator expr_lvl1 { SBop (operator, $1, $3) }
+| ASSERT expr_lvl2 { SAssert ($2) }
+| func=expr_lvl2 args=expr_arguments { apply func args }
+| expr_lvl2 { $1 }
 ;
 
-nonempty_expr_list:
-    expr=expression_level2 { [expr] }
-  | expr_list=nonempty_expr_list expr=expression_level2 { expr_list @ [expr] }
+expr_arguments:
+  expr_lvl2 { [ $1 ] }
+| expr_arguments expr_lvl2 { $1 @ [ $2 ] }
 ;
 
-expression_level2:
-    LPAREN RPAREN { SUnit }
-  | TRUE { STrue }
-  | FALSE { SFalse }
-  | NUMBER { SNum $1 }
-  | IDENT { SVar $1 }
-  | LPAREN expr=expression RPAREN { expr }
+expr_lvl2:
+  LPAREN RPAREN { SUnit }
+| TRUE { STrue }
+| FALSE { SFalse }
+| n=NUM { SNum n }
+| x=VAR { SVar x }
+| LPAREN nested_expr=expression RPAREN { nested_expr }
 ;
 
 %inline binary_operator:
-    ADD { Add }
-  | SUB { Sub }
-  | MUL { Mul }
-  | DIV { Div }
-  | MOD { Mod }
-  | LT { Lt }
-  | LTE { Lte }
-  | GT { Gt }
-  | GTE { Gte }
-  | EQ { Eq }
-  | NEQ { Neq }
-  | AND { And }
-  | OR { Or }
+  ADD { Add }
+| SUB { Sub }
+| MUL { Mul }
+| DIV { Div }
+| MOD { Mod }
+| LT { Lt }
+| LTE { Lte }
+| GT { Gt }
+| GTE { Gte }
+| EQUALS { Eq }
+| NEQ { Neq }
+| AND { And }
+| OR { Or }
 ;

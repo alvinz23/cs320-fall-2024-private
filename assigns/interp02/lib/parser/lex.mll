@@ -2,52 +2,43 @@
   open Par
 }
 
-let whitespace = [' ' '\t' '\n' '\r']+
-
-let digit = ['0'-'9']
-
-let num = '-'? digit+
-
-let var = ['a'-'z' '_' ] [ 'a'-'z' 'A'-'Z' '0'-'9' '_' '\'' ]*
+let whitespace = [' ' '\n' '\t' '\r']+
+let num = '-'? ['0'-'9']+
+let var = ['a'-'z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 
 rule read = parse
-  | whitespace { read lexbuf }
-  | num { NUMBER (int_of_string (Lexing.lexeme lexbuf)) }
-  | var as id {
-      match id with
-      | "let" -> LET
-      | "rec" -> REC
-      | "in" -> IN
-      | "if" -> IF
-      | "then" -> THEN
-      | "else" -> ELSE
-      | "fun" -> FUN
-      | "assert" -> ASSERT
-      | "mod" -> MOD
-      | "true" -> TRUE
-      | "false" -> FALSE
-      | "int" -> INT
-      | "bool" -> BOOL
-      | "unit" -> UNIT
-      | _ -> IDENT id
-    }
-  | "->" { ARROW }
-  | "(" { LPAREN }
-  | ")" { RPAREN }
-  | ":" { COLON }
-  | "=" { EQUAL }
-  | "+" { ADD }
-  | "-" { SUB }
-  | "*" { MUL }
-  | "/" { DIV }
-  | "mod" { MOD }
-  | "<=" { LTE }
-  | ">=" { GTE }
-  | "<>" { NEQ }
-  | "<" { LT }
-  | ">" { GT }
-  | "&&" { AND }
-  | "||" { OR }
-  | "()" { UNIT }
-  | eof { EOF }
-  |_ as ch { failwith ("Unexpected char: " ^ String.make 1 ch) }
+    | num  { NUM (int_of_string (Lexing.lexeme lexbuf)) }
+    | var { VAR (Lexing.lexeme lexbuf) }
+    | whitespace { read lexbuf }
+    | eof { EOF }
+    | "int"               { INT }
+    | "bool"              { BOOL }
+    | "true"              { TRUE }
+    | "false"             { FALSE }
+    | "unit"              { UNIT }
+    | "if"                { IF }
+    | "then"              { THEN }
+    | "else"              { ELSE }
+    | "let"               { LET }
+    | "rec"               { REC }
+    | "in"                { IN }
+    | "fun"               { FUN }
+    | "<>"                { NEQ }
+    | "<="                { LTE }
+    | "<"                 { LT }
+    | ">="                { GTE }
+    | ">"                 { GT }
+    | "+"                 { ADD }
+    | "-"                 { SUB }
+    | "*"                 { MUL }
+    | "/"                 { DIV }
+    | "mod"               { MOD }
+    | "&&"                { AND }
+    | "||"                { OR }
+    | "unit"              { UNIT }
+    | "assert"            { ASSERT }
+    | "->"                { ARROW }
+    | "="                 { EQUALS }
+    | '('                 { LPAREN }
+    | ')'                 { RPAREN }
+    | ':'                 { COLON }
