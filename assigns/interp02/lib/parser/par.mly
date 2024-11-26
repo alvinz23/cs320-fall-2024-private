@@ -1,5 +1,8 @@
+
+
 %{
   open Utils
+  (* Helper function to construct nested applications *)
   let rec build_application func args =
     match args with
     | [] -> func
@@ -27,15 +30,18 @@
 
 %%
 
+(* Entry point of the parser *)
 program:
     toplet_list EOF { $1 }
 ;
 
+(* List of top-level definitions *)
 toplet_list:
- { [] }
+    /* empty */ { [] }
   | toplet_list toplet { $1 @ [$2] }
 ;
 
+(* Top-level let bindings *)
 toplet:
     LET name=IDENT params=param_list_opt COLON typ=type_expr EQUAL expr=expression {
       { is_rec = false; name; args = params; ty = typ; value = expr }
@@ -45,20 +51,24 @@ toplet:
     }
 ;
 
+(* Optional list of parameters *)
 param_list_opt:
-    { [] }
+    /* empty */ { [] }
   | param_list { $1 }
 ;
 
+(* List of parameters *)
 param_list:
     param { [$1] }
   | param_list param { $1 @ [$2] }
 ;
 
+(* Single parameter with type annotation *)
 param:
     LPAREN name=IDENT COLON typ=type_expr RPAREN { (name, typ) }
 ;
 
+(* Type expressions *)
 type_expr:
     INT { IntTy }
   | BOOL { BoolTy }
@@ -67,6 +77,7 @@ type_expr:
   | t1=type_expr ARROW t2=type_expr { FunTy (t1, t2) }
 ;
 
+(* Expressions *)
 expression:
     LET name=IDENT params=param_list_opt COLON typ=type_expr EQUAL value=expression IN body=expression {
       SLet { is_rec = false; name; args = params; ty = typ; value; body }
@@ -83,9 +94,10 @@ expression:
   | expr=expression_level1 { expr }
 ;
 
+(* Expression parsing with operator precedence *)
 expression_level1:
-    expression_level1 op=binary_operator expression_level1 {
-      SBop (op, $1, $3)
+    left=expression_level1 op=binary_operator right=expression_level1 {
+      SBop (op, left, right)
     }
   | ASSERT expr=expression_level2 {
       SAssert expr
@@ -100,8 +112,8 @@ expression_level1:
 
 (* Non-empty list of expressions *)
 nonempty_expr_list:
-    expr=expression_level2 { [$1] }
-  | nonempty_expr_list expr=expression_level2 { $1 @ [$2] }
+    expr=expression_level2 { [expr] }
+  | expr_list=nonempty_expr_list expr=expression_level2 { expr_list @ [expr] }
 ;
 
 (* Atomic expressions *)

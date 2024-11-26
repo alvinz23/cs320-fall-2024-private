@@ -12,7 +12,7 @@ let var = ['a'-'z' '_' ] [ 'a'-'z' 'A'-'Z' '0'-'9' '_' '\'' ]*
 
 rule read = parse
   | whitespace { read lexbuf }
-  | num { NUM (int_of_string (Lexing.lexeme lexbuf)) }
+  | num { NUMBER (int_of_string (Lexing.lexeme lexbuf)) }
   | var as id {
       match id with
       | "let" -> LET
@@ -28,18 +28,19 @@ rule read = parse
       | "false" -> FALSE
       | "int" -> INT
       | "bool" -> BOOL
-      | "unit" -> UNIT_TYPE
-      | _ -> VAR id
+      | "unit" -> UNIT
+      | _ -> IDENT id
     }
   | "->" { ARROW }
   | "(" { LPAREN }
   | ")" { RPAREN }
   | ":" { COLON }
   | "=" { EQUAL }
-  | "+" { PLUS }
-  | "-" { MINUS }
-  | "*" { TIMES }
-  | "/" { DIVIDE }
+  | "+" { ADD }
+  | "-" { SUB }
+  | "*" { MUL }
+  | "/" { DIV }
+  | "mod" { MOD }
   | "<=" { LTE }
   | ">=" { GTE }
   | "<>" { NEQ }
@@ -49,5 +50,4 @@ rule read = parse
   | "||" { OR }
   | "()" { UNIT }
   | eof { EOF }
-  |_ as ch { failwith ("Unexpected character: " ^ String.make 1 ch) }
-
+  |_ as ch { failwith ("Unexpected char: " ^ String.make 1 ch) }
