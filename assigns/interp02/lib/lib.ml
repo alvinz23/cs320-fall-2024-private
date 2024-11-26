@@ -1,16 +1,15 @@
 
 open Utils
 open My_parser
+open Stdlib320
 
-type 'a env = (string * 'a) list 
+type ty_env = ty Stdlib320.env
+type val_env = value Stdlib320.env
+module Env = Stdlib320.Env
 
-type ty_env = ty env
-type val_env = value env
-module Env = struct
-  let empty = ([] : (string * 'a) list)
-  let add x v env = (x, v) :: env
-  let find_opt x env = List.assoc_opt x env
-end
+
+exception AssertFail
+exception DivByZero
 
 let parse s =
   parse s
@@ -89,9 +88,6 @@ and desugar_ty ty =
   | BoolTy -> BoolTy
   | UnitTy -> UnitTy
   | FunTy (t1, t2) -> FunTy (desugar_ty t1, desugar_ty t2)
-
-  exception AssertFail
-  exception DivByZero
 
   
 (* type_of function *)
@@ -212,12 +208,11 @@ let type_of expr =
           | Let { is_rec = true; name; ty = _; value; body } ->
             (match value with
              | Fun (arg_name, _, body_fun) ->
-                 let rec closure_env = Env.empty
-                 and closure = VClos { name = Some name; arg = arg_name; body = body_fun; env = closure_env } in
-                 let closure_env = Env.add name closure env in
-                 eval_expr closure_env body
+                 let closure = VClos { name = Some name; arg = arg_name; body = body_fun; env = env } in
+                 let env' = Env.add name closure env in
+                 eval_expr env' body
              | _ -> failwith "Recursive let must define a function")
-        
+             
       | Assert e ->
           let cond = eval_expr env e in
           (match cond with
@@ -249,7 +244,6 @@ let type_of expr =
     in
     eval_expr Env.empty expr
   
-    
     let interp s =
       match parse s with
       | None -> Error ParseErr

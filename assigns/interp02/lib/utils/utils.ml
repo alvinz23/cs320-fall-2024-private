@@ -7,13 +7,6 @@ type ty =
   | UnitTy
   | FunTy of ty * ty
 
-module Env = struct
-  let empty = ([] : (string * 'a) list)
-  let add x v env = (x, v) :: env
-  let find_opt x env = List.assoc_opt x env
-end
-
-
 let string_of_ty =
   let rec go = function
     | IntTy -> "int"

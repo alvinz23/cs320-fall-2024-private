@@ -2,18 +2,18 @@
   open Utils
 %}
 
-
-%token LET REC IN IF THEN ELSE FUN ASSERT MOD TRUE FALSE
+%token LET REC IN IF THEN ELSE FUN ASSERT TRUE FALSE
 %token INT BOOL UNIT_TYPE
-%token LPAREN RPAREN COLON EQUAL ARROW
-%token PLUS MINUS TIMES DIVIDE
-%token LT LTE GT GTE EQ NEQ
+%token LPAREN RPAREN COLON EQUAL
+%token DIVIDE
 %token AND OR
 %token UNIT
 %token <int> NUM
 %token <string> VAR
 %token EOF
-
+%token PLUS MINUS TIMES MOD
+%token LT LTE GT GTE EQ NEQ
+%token ARROW
 
 %right ARROW
 %left OR
@@ -21,11 +21,9 @@
 %nonassoc EQ NEQ LT LTE GT GTE
 %left PLUS MINUS
 %left TIMES DIVIDE MOD
-%left APPLY  
-
+%left APPLY
 
 %start <Utils.prog> prog
-
 
 %%
 
@@ -77,49 +75,25 @@ expr:
       | arg :: args -> SFun { arg; args; body = $4 }
       | [] -> failwith "Function must have at least one argument"
     }
-  | expr1 { $1 }
-
-expr1:
-  | expr1 OR expr2 { SBop (Or, $1, $3) }
-  | expr2 { $1 }
-
-expr2:
-  | expr2 AND expr3 { SBop (And, $1, $3) }
-  | expr3 { $1 }
-
-expr3:
-  | expr3 relop expr4 { SBop ($2, $1, $3) }
-  | expr4 { $1 }
-
-expr4:
-  | expr4 PLUS expr5 { SBop (Add, $1, $3) }
-  | expr4 MINUS expr5 { SBop (Sub, $1, $3) }
-  | expr5 { $1 }
-
-expr5:
-  | expr5 TIMES expr6 { SBop (Mul, $1, $3) }
-  | expr5 DIVIDE expr6 { SBop (Div, $1, $3) }
-  | expr5 MOD expr6 { SBop (Mod, $1, $3) }
-  | expr6 { $1 }
-
-expr6:
-  | expr6 expr7 %prec APPLY { SApp ($1, $2) }
-  | expr7 { $1 }
-
-expr7:
+  | expr OR expr { SBop (Or, $1, $3) }
+  | expr AND expr { SBop (And, $1, $3) }
+  | expr EQ expr { SBop (Eq, $1, $3) }
+  | expr NEQ expr { SBop (Neq, $1, $3) }
+  | expr LT expr { SBop (Lt, $1, $3) }
+  | expr LTE expr { SBop (Lte, $1, $3) }
+  | expr GT expr { SBop (Gt, $1, $3) }
+  | expr GTE expr { SBop (Gte, $1, $3) }
+  | expr PLUS expr { SBop (Add, $1, $3) }
+  | expr MINUS expr { SBop (Sub, $1, $3) }
+  | expr TIMES expr { SBop (Mul, $1, $3) }
+  | expr DIVIDE expr { SBop (Div, $1, $3) }
+  | expr MOD expr { SBop (Mod, $1, $3) }
+  | expr expr %prec APPLY { SApp ($1, $2) }
+  | ASSERT expr { SAssert $2 }
   | LPAREN expr RPAREN { $2 }
   | UNIT { SUnit }
   | TRUE { STrue }
   | FALSE { SFalse }
   | NUM { SNum $1 }
   | VAR { SVar $1 }
-  | ASSERT expr7 { SAssert $2 }
-
-relop:
-  | LT { Lt }
-  | LTE { Lte }
-  | GT { Gt }
-  | GTE { Gte }
-  | EQ { Eq }
-  | NEQ { Neq }
 
