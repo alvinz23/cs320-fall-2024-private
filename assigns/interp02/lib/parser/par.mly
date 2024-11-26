@@ -1,99 +1,132 @@
 %{
   open Utils
+  let rec build_application func args =
+    match args with
+    | [] -> func
+    | arg :: rest -> build_application (SApp (func, arg)) rest
 %}
 
+%token <string> IDENT
+%token <int> NUMBER
 %token LET REC IN IF THEN ELSE FUN ASSERT TRUE FALSE
-%token INT BOOL UNIT_TYPE
+%token INT BOOL UNIT
 %token LPAREN RPAREN COLON EQUAL
-%token DIVIDE
-%token AND OR
-%token UNIT
-%token <int> NUM
-%token <string> VAR
-%token EOF
-%token PLUS MINUS TIMES MOD
-%token LT LTE GT GTE EQ NEQ
 %token ARROW
+%token ADD SUB MUL DIV MOD
+%token AND OR
+%token LT LTE GT GTE EQ NEQ
+%token EOF
 
-%right ARROW
-%left OR
-%left AND
-%nonassoc EQ NEQ LT LTE GT GTE
-%left PLUS MINUS
-%left TIMES DIVIDE MOD
-%left APPLY
+%right OR
+%right AND
+%nonassoc LT LTE GT GTE EQ NEQ
+%left ADD SUB
+%left MUL DIV MOD
 
-%start <Utils.prog> prog
+%start <Utils.prog> program
 
 %%
 
-prog:
-  | toplet_list EOF { List.rev $1 }
+program:
+    toplet_list EOF { $1 }
+;
 
 toplet_list:
-  | /* empty */ { [] }
-  | toplet_list toplet { $2 :: $1 }
+ { [] }
+  | toplet_list toplet { $1 @ [$2] }
+;
 
 toplet:
-  | LET VAR arg_list_opt COLON ty EQUAL expr {
-      { is_rec = false; name = $2; args = $3; ty = $5; value = $7 }
+    LET name=IDENT params=param_list_opt COLON typ=type_expr EQUAL expr=expression {
+      { is_rec = false; name; args = params; ty = typ; value = expr }
     }
-  | LET REC VAR arg_list arg_list_opt COLON ty EQUAL expr {
-      { is_rec = true; name = $3; args = $4 @ $5; ty = $7; value = $9 }
+  | LET REC name=IDENT first_param=param rest_params=param_list COLON typ=type_expr EQUAL expr=expression {
+      { is_rec = true; name; args = first_param :: rest_params; ty = typ; value = expr }
     }
+;
 
-arg_list_opt:
-  | arg_list { $1 }
-  | /* empty */ { [] }
+param_list_opt:
+    { [] }
+  | param_list { $1 }
+;
 
-arg_list:
-  | arg_list arg { $1 @ [$2] }
-  | arg { [$1] }
+param_list:
+    param { [$1] }
+  | param_list param { $1 @ [$2] }
+;
 
-arg:
-  | LPAREN VAR COLON ty RPAREN { ($2, $4) }
+param:
+    LPAREN name=IDENT COLON typ=type_expr RPAREN { (name, typ) }
+;
 
-ty:
-  | INT { IntTy }
+type_expr:
+    INT { IntTy }
   | BOOL { BoolTy }
-  | UNIT_TYPE { UnitTy }
-  | ty ARROW ty { FunTy ($1, $3) }
-  | LPAREN ty RPAREN { $2 }
+  | UNIT { UnitTy }
+  | LPAREN type_expr RPAREN { $2 }
+  | t1=type_expr ARROW t2=type_expr { FunTy (t1, t2) }
+;
 
-expr:
-  | LET VAR arg_list_opt COLON ty EQUAL expr IN expr {
-      SLet { is_rec = false; name = $2; args = $3; ty = $5; value = $7; body = $9 }
+expression:
+    LET name=IDENT params=param_list_opt COLON typ=type_expr EQUAL value=expression IN body=expression {
+      SLet { is_rec = false; name; args = params; ty = typ; value; body }
     }
-  | LET REC VAR arg_list arg_list_opt COLON ty EQUAL expr IN expr {
-      SLet { is_rec = true; name = $3; args = $4 @ $5; ty = $7; value = $9; body = $11 }
+  | LET REC name=IDENT first_param=param rest_params=param_list COLON typ=type_expr EQUAL value=expression IN body=expression {
+      SLet { is_rec = true; name; args = first_param :: rest_params; ty = typ; value; body }
     }
-  | IF expr THEN expr ELSE expr {
-      SIf ($2, $4, $6)
+  | IF condition=expression THEN true_branch=expression ELSE false_branch=expression {
+      SIf (condition, true_branch, false_branch)
     }
-  | FUN arg_list ARROW expr {
-      match $2 with
-      | arg :: args -> SFun { arg; args; body = $4 }
-      | [] -> failwith "Function must have at least one argument"
+  | FUN first_param=param rest_params=param_list ARROW body=expression {
+      SFun { arg = first_param; args = rest_params; body }
     }
-  | expr OR expr { SBop (Or, $1, $3) }
-  | expr AND expr { SBop (And, $1, $3) }
-  | expr EQ expr { SBop (Eq, $1, $3) }
-  | expr NEQ expr { SBop (Neq, $1, $3) }
-  | expr LT expr { SBop (Lt, $1, $3) }
-  | expr LTE expr { SBop (Lte, $1, $3) }
-  | expr GT expr { SBop (Gt, $1, $3) }
-  | expr GTE expr { SBop (Gte, $1, $3) }
-  | expr PLUS expr { SBop (Add, $1, $3) }
-  | expr MINUS expr { SBop (Sub, $1, $3) }
-  | expr TIMES expr { SBop (Mul, $1, $3) }
-  | expr DIVIDE expr { SBop (Div, $1, $3) }
-  | expr MOD expr { SBop (Mod, $1, $3) }
-  | expr expr %prec APPLY { SApp ($1, $2) }
-  | ASSERT expr { SAssert $2 }
-  | LPAREN expr RPAREN { $2 }
-  | UNIT { SUnit }
+  | expr=expression_level1 { expr }
+;
+
+expression_level1:
+    expression_level1 op=binary_operator expression_level1 {
+      SBop (op, $1, $3)
+    }
+  | ASSERT expr=expression_level2 {
+      SAssert expr
+    }
+  | func=expression_level2 args=nonempty_expr_list {
+      build_application func args
+    }
+  | expr=expression_level2 {
+      expr
+    }
+;
+
+(* Non-empty list of expressions *)
+nonempty_expr_list:
+    expr=expression_level2 { [$1] }
+  | nonempty_expr_list expr=expression_level2 { $1 @ [$2] }
+;
+
+(* Atomic expressions *)
+expression_level2:
+    LPAREN RPAREN { SUnit }
   | TRUE { STrue }
   | FALSE { SFalse }
-  | NUM { SNum $1 }
-  | VAR { SVar $1 }
+  | NUMBER { SNum $1 }
+  | IDENT { SVar $1 }
+  | LPAREN expr=expression RPAREN { expr }
+;
 
+(* Binary operators *)
+%inline binary_operator:
+    ADD { Add }
+  | SUB { Sub }
+  | MUL { Mul }
+  | DIV { Div }
+  | MOD { Mod }
+  | LT { Lt }
+  | LTE { Lte }
+  | GT { Gt }
+  | GTE { Gte }
+  | EQ { Eq }
+  | NEQ { Neq }
+  | AND { And }
+  | OR { Or }
+;
