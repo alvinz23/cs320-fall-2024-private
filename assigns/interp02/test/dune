@@ -1,2 +1,5 @@
-(test
- (name test_interp02))
+(executable
+ (name test_interp02)
+ (modules test_interp02)
+ (libraries interp02 utils)
+)
