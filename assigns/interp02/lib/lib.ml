@@ -30,88 +30,68 @@ let expected_types_of_bop op =
       (BoolTy, BoolTy, BoolTy)
 
       
-  
-      let desugar : prog -> expr = fun program ->
-  let rec transform_expr (surface_expr : sfexpr) : expr =
-    match surface_expr with
-    | SUnit -> Unit
-    | STrue -> True
-    | SFalse -> False
-    | SNum number -> Num number
-    | SVar variable -> Var variable
-    | SBop (binary_op, left, right) ->
-        Bop (binary_op, transform_expr left, transform_expr right)
-    | SIf (condition, then_branch, else_branch) ->
-        If (transform_expr condition, transform_expr then_branch, transform_expr else_branch)
-    | SAssert assertion_expr -> Assert (transform_expr assertion_expr)
-    | SFun { arg = (arg_name, arg_type); args = []; body } ->
-        Fun (arg_name, arg_type, transform_expr body)
-    | SFun { arg = (arg_name, arg_type); args = args_list; body } ->
-        (match args_list with
-         | [] -> Fun (arg_name, arg_type, transform_expr body)
-         | first_arg :: rest_args ->
-             transform_expr (SFun { arg = first_arg; args = rest_args; body }))
-    | SLet { is_rec = is_recursive; name = binding_name; args = []; ty = binding_type; value; body } ->
-        Let
-          {
-            is_rec = is_recursive;
-            name = binding_name;
-            ty = binding_type;
-            value = transform_expr value;
-            body = transform_expr body;
-          }
-    | SLet { is_rec = is_recursive; name = binding_name; args = binding_args; ty; value; body } ->
-        (match binding_args with
-         | [] -> transform_expr (SLet { is_rec = is_recursive; name = binding_name; args = []; ty; value; body })
-         | first_arg :: rest_args ->
-             Let
-               {
-                 is_rec = is_recursive;
-                 name = binding_name;
-                 ty =
-                   List.fold_right
-                     (fun (_, arg_type) acc -> FunTy (arg_type, acc))
-                     rest_args ty;
-                 value =
-                   transform_expr
-                     (SFun { arg = first_arg; args = rest_args; body = value });
-                 body = transform_expr body;
-               })
-    | SApp (function_expr, argument_expr) ->
-        App (transform_expr function_expr, transform_expr argument_expr)
-  in
-
-  let rec process topLvl =
-    match topLvl with
-    | [] -> Unit
-    | { is_rec = is_recursive; name = binding_name; args = binding_args; ty = binding_type; value } :: remaining_bindings ->
-        (match binding_args with
-         | [] ->
-             Let
-               {
-                 is_rec = is_recursive;
-                 name = binding_name;
-                 ty = binding_type;
-                 value = transform_expr value;
-                 body = process remaining_bindings;
-               }
-         | first_arg :: rest_args ->
-             Let
-               {
-                 is_rec = is_recursive;
-                 name = binding_name;
-                 ty =
-                   List.fold_right
-                     (fun (_, arg_type) acc -> FunTy (arg_type, acc))
-                     binding_args binding_type;
-                 value =
-                   transform_expr
-                     (SFun { arg = first_arg; args = rest_args; body = value });
-                 body = process remaining_bindings;
-               })
-  in
-  process program
-
+      let tail = function
+      | [] -> failwith "dne" 
+      | _ :: t -> t
+    
+    let head = function
+      | [] -> failwith "dne"
+      | h :: _ -> h
+    
+    let desugar : prog -> expr = fun program ->
+      let rec transform_sfexpr (sf_expr : sfexpr) : expr =
+        match sf_expr with
+        | SUnit -> Unit
+        | STrue -> True
+        | SFalse -> False
+        | SNum n -> Num n
+        | SVar x -> Var x
+        | SBop (op, e1, e2) -> Bop (op, transform_sfexpr e1, transform_sfexpr e2)
+        | SIf (cond, then_expr, else_expr) ->
+            If (transform_sfexpr cond, transform_sfexpr then_expr, transform_sfexpr else_expr)
+        | SAssert expr -> Assert (transform_sfexpr expr)
+        | SFun { arg = (x, t); args = []; body } ->
+            Fun (x, t, transform_sfexpr body)
+        | SFun { arg = (x, t); args = more_args; body } ->
+            let next_arg = head more_args in
+            let remaining_args = tail more_args in
+            Fun (x, t, transform_sfexpr (SFun { arg = next_arg; args = remaining_args; body }))
+        | SLet { is_rec; name; args = []; ty; value; body } ->
+            Let { is_rec; name; ty; value = transform_sfexpr value; body = transform_sfexpr body }
+        | SLet { is_rec; name; args = first_arg :: rest_args; ty; value; body } ->
+            let function_type = List.fold_right (fun (_, t) acc -> FunTy (t, acc)) rest_args ty in
+            Let
+              {
+                is_rec;
+                name;
+                ty = FunTy (snd first_arg, function_type);
+                value = transform_sfexpr (SFun { arg = first_arg; args = rest_args; body = value });
+                body = transform_sfexpr body;
+              }
+        | SApp (e1, e2) -> App (transform_sfexpr e1, transform_sfexpr e2)
+      in
+    
+      let rec transform_prog_items (prog_items : prog) =
+        match prog_items with
+        | [] -> Unit
+        | { is_rec; name; args; ty; value } :: rest_items ->
+            let transformed_value =
+              if args = [] then value
+              else SFun { arg = head args; args = tail args; body = value }
+            in
+            let function_type = List.fold_right (fun (_, t) acc -> FunTy (t, acc)) args ty in
+            Let
+              {
+                is_rec;
+                name;
+                ty = if args = [] then ty else function_type;
+                value = transform_sfexpr transformed_value;
+                body = transform_prog_items rest_items;
+              }
+      in
+    
+      transform_prog_items program
+    
 let type_of expr =
   let rec type_check (gamma : ty_env) (e : expr) : (ty, error) result =
     match e with
