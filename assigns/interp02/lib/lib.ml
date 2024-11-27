@@ -178,66 +178,76 @@ let type_of expr =
            | Some v -> v
            | None -> failwith ("Unbound variable " ^ x))
       | Bop (op, e1, e2) ->
-          let v1 = eval_expr env e1 in
-          let v2 = eval_expr env e2 in
-          eval_bop op v1 v2
+          (match op with
+           | And ->
+               (match eval_expr env e1 with
+                | VBool false -> VBool false  (* Short-circuit *)
+                | VBool true -> eval_expr env e2
+                | _ -> failwith "Type error in And operation")
+           | Or ->
+               (match eval_expr env e1 with
+                | VBool true -> VBool true  (* Short-circuit *)
+                | VBool false -> eval_expr env e2
+                | _ -> failwith "Type error in Or operation")
+           | _ ->
+               let v1 = eval_expr env e1 in
+               let v2 = eval_expr env e2 in
+               eval_bop op v1 v2)
       | If (e1, e2, e3) ->
-          let cond = eval_expr env e1 in
-          (match cond with
+          (match eval_expr env e1 with
            | VBool true -> eval_expr env e2
            | VBool false -> eval_expr env e3
-           | _ -> failwith "Condition is not a boolean")
+           | _ -> failwith "Type error in If condition")
       | Fun (arg_name, _, body) ->
-          VClos { name = None; arg = arg_name; body; env }
+          VClos { name = None; arg = arg_name; body = body; env = env }
       | App (e1, e2) ->
-          let func = eval_expr env e1 in
-          let arg_val = eval_expr env e2 in
-          (match func with
-           | VClos { name; arg; body; env = closure_env } ->
-               let env' = Env.add arg arg_val closure_env in
-               let env' =
-                 match name with
-                 | Some fname -> Env.add fname func env'
-                 | None -> env'
-               in
-               eval_expr env' body
-           | _ -> failwith "Attempted to call a non-function value")
+          (match eval_expr env e1 with
+           | VClos { name = None; arg; body; env = closure_env } ->
+               let arg_val = eval_expr env e2 in
+               let new_env = Env.add arg arg_val closure_env in
+               eval_expr new_env body
+           | VClos { name = Some fname; arg; body; env = closure_env } ->
+               let arg_val = eval_expr env e2 in
+               let recursive_env = Env.add fname (VClos { name = Some fname; arg; body; env = closure_env }) closure_env in
+               let new_env = Env.add arg arg_val recursive_env in
+               eval_expr new_env body
+           | _ -> failwith "Type error in function application")
       | Let { is_rec = false; name; ty = _; value; body } ->
           let value_val = eval_expr env value in
-          let env' = Env.add name value_val env in
-          eval_expr env' body
-          | Let { is_rec = true; name; ty = _; value; body } ->
-            (match value with
-             | Fun (arg_name, _, body_fun) ->
-                 let closure = VClos { name = Some name; arg = arg_name; body = body_fun; env = env } in
-                 let env' = Env.add name closure env in
-                 eval_expr env' body
-             | _ -> failwith "Recursive let must define a function")
-             
+          let new_env = Env.add name value_val env in
+          eval_expr new_env body
+      | Let { is_rec = true; name; ty = _; value; body } ->
+          (match value with
+           | Fun (arg_name, _, body_fun) ->
+               let rec_closure = VClos { name = Some name; arg = arg_name; body = body_fun; env = env } in
+               let new_env = Env.add name rec_closure env in
+               eval_expr new_env body
+           | _ -> failwith "Type error in recursive Let binding")
       | Assert e ->
-          let cond = eval_expr env e in
-          (match cond with
+          (match eval_expr env e with
            | VBool true -> VUnit
            | VBool false -> raise AssertFail
-           | _ -> failwith "Assert expression is not a boolean")
+           | _ -> failwith "Type error in Assert")
     and eval_bop op v1 v2 =
       match (op, v1, v2) with
       | (Add, VNum n1, VNum n2) -> VNum (n1 + n2)
       | (Sub, VNum n1, VNum n2) -> VNum (n1 - n2)
       | (Mul, VNum n1, VNum n2) -> VNum (n1 * n2)
-      | (Div, VNum n1, VNum n2) ->
-          if n2 = 0 then raise DivByZero else VNum (n1 / n2)
-      | (Mod, VNum n1, VNum n2) ->
-          if n2 = 0 then raise DivByZero else VNum (n1 mod n2)
+      | (Div, VNum _, VNum 0) -> raise DivByZero
+      | (Div, VNum n1, VNum n2) -> VNum (n1 / n2)
+      | (Mod, VNum _, VNum 0) -> raise DivByZero
+      | (Mod, VNum n1, VNum n2) -> VNum (n1 mod n2)
       | (Lt, VNum n1, VNum n2) -> VBool (n1 < n2)
       | (Lte, VNum n1, VNum n2) -> VBool (n1 <= n2)
       | (Gt, VNum n1, VNum n2) -> VBool (n1 > n2)
       | (Gte, VNum n1, VNum n2) -> VBool (n1 >= n2)
       | (Eq, VNum n1, VNum n2) -> VBool (n1 = n2)
       | (Neq, VNum n1, VNum n2) -> VBool (n1 <> n2)
-      | (And, VBool b1, VBool b2) -> VBool (b1 && b2)
-      | (Or, VBool b1, VBool b2) -> VBool (b1 || b2)
-      | _ -> failwith "Invalid operands for binary operation"
+      | (Eq, VBool b1, VBool b2) -> VBool (b1 = b2)
+      | (Neq, VBool b1, VBool b2) -> VBool (b1 <> b2)
+      | (Eq, VUnit, VUnit) -> VBool true
+      | (Neq, VUnit, VUnit) -> VBool false
+      | _ -> failwith "Type error in binary operation"
     in
     eval_expr Env.empty expr
   
@@ -256,5 +266,7 @@ let type_of expr =
                | DivByZero -> Error (OpTyErrR (Div, IntTy, IntTy)) 
                | Failure msg -> Error (UnknownVar msg)) 
           | Error err -> Error err
+
+          
     
   
