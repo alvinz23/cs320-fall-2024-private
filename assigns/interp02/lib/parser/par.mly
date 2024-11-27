@@ -1,9 +1,9 @@
 %{
   open Utils
-  let rec mk_app e es =
-    match es with
-    | [] -> e
-    | h :: t -> mk_app (SApp (e, h)) t
+  let rec apply_args func args =
+    match args with
+    | [] -> func
+    | x :: xs -> apply_args (SApp (func, x)) xs
 %}
 
 %token <string> VAR
@@ -42,7 +42,7 @@
 
 %right OR
 %right AND
-%left LT LTE GT GTE NEQ
+%left LT LTE GT GTE EQUALS NEQ
 %left ADD SUB
 %left MUL DIV MOD
 
@@ -51,87 +51,63 @@
 %%
 
 prog:
-  | top_lets EOF { $1 }
+  | definitions = list(definition) EOF { definitions }
 ;
 
-top_lets:
-  | toplet top_lets { $1 :: $2 }
-  | { [] }
+definition:
+  | LET id = VAR params = list(param) COLON typ = type_expr EQUALS body = expression
+    { { is_rec = false; name = id; args = params; ty = typ; value = body } }
+  | LET REC id = VAR first_param = param other_params = list(param) COLON typ = type_expr 
+    EQUALS body = expression
+    { { is_rec = true; name = id; args = first_param :: other_params; ty = typ; value = body } }
 ;
 
-toplet:
-  | LET VAR args COLON ty EQUALS expr
-    { { is_rec = false; name = $2; args = $3; ty = $5; value = $7 } }
-  | LET REC VAR arg args COLON ty EQUALS expr
-    { { is_rec = true; name = $3; args = $4 :: $5; ty = $7; value = $9 } }
+param:
+  | LPAREN id = VAR COLON typ = type_expr RPAREN 
+    { (id, typ) }
 ;
 
-args:
-  | arg args { $1 :: $2 }
-  |  { [] }
-;
-
-arg:
-  | LPAREN VAR COLON ty RPAREN { ($2, $4) }
-;
-
-ty:
+type_expr:
   | INT { IntTy }
   | BOOL { BoolTy }
   | UNIT { UnitTy }
-  | ty ARROW ty { FunTy($1, $3) }
-  | LPAREN ty RPAREN { $2 }
+  | t1 = type_expr ARROW t2 = type_expr { FunTy(t1, t2) }
+  | LPAREN inner_type = type_expr RPAREN { inner_type }
 ;
 
-expr:
-  | LET VAR args COLON ty EQUALS expr IN expr
-    { SLet { is_rec = false; name = $2; args = $3; ty = $5; value = $7; body = $9 } }
-  | LET REC VAR arg args COLON ty EQUALS expr IN expr
-    { SLet { is_rec = true; name = $3; args = $4 :: $5; ty = $7; value = $9; body = $11 } }
-  | IF expr THEN expr ELSE expr %prec THEN
-    { SIf($2, $4, $6) }
-| FUN first_arg = arg rest_args = list(arg) ARROW body = expr
-    { SFun {arg = first_arg; args = rest_args; body} }
-  | expr2 { $1 }
+expression:
+  | LET id = VAR params = list(param) COLON typ = type_expr EQUALS value = expression IN body = expression
+    { SLet { is_rec = false; name = id; args = params; ty = typ; value; body } }
+  | LET REC id = VAR first_param = param other_params = list(param) COLON typ = type_expr 
+    EQUALS value = expression IN body = expression
+    { SLet { is_rec = true; name = id; args = first_param :: other_params; ty = typ; value; body } }
+  | IF cond = expression THEN if_body = expression ELSE else_body = expression
+    { SIf(cond, if_body, else_body) }
+  | FUN first_param = param other_params = list(param) ARROW body = expression
+    { SFun { arg = first_param; args = other_params; body } }
+  | term_expr = term { term_expr }
 ;
 
-expr2:
-  | e1 = expr2 op = bop e2 = expr2 
-    { SBop(op, e1, e2) }
-  | ASSERT e = expr3 
-    { SAssert(e) }
-  | func = expr3 args = nonempty_list(expr3) 
-    { mk_app func args }
-  | e = expr3 { e }
+term:
+  | left_term = term bin_op = operator right_term = term 
+    { SBop(bin_op, left_term, right_term) }
+  | ASSERT cond = primary_expr 
+    { SAssert(cond) }
+  | func = primary_expr args = nonempty_list(primary_expr) 
+    { apply_args func args }
+  | primary_expr = primary_expr { primary_expr }
 ;
 
-expr3:
-  | expr3 AND expr4 { SBop(And, $1, $3) }
-  | expr4 { $1 }
-;
-
-expr4:
-  | expr4 ADD expr5 { SBop(Add, $1, $3) }
-  | expr4 SUB expr5 { SBop(Sub, $1, $3) }
-  | expr5 { $1 }
-;
-
-expr5:
-  | expr5 MUL expr6 { SBop(Mul, $1, $3) }
-  | expr5 DIV expr6 { SBop(Div, $1, $3) }
-  | expr6 { $1 }
-;
-
-expr6:
-  | LPAREN expr RPAREN { $2 }
-  | NUM { SNum($1) }
-  | VAR { SVar($1) }
+primary_expr:
   | LPAREN RPAREN { SUnit }
   | TRUE { STrue }
   | FALSE { SFalse }
+  | num_val = NUM { SNum num_val }
+  | var_name = VAR { SVar var_name }
+  | LPAREN expr = expression RPAREN { expr }
 ;
 
-%inline bop:
+%inline operator:
   | ADD { Add }
   | SUB { Sub }
   | MUL { Mul }
@@ -141,6 +117,7 @@ expr6:
   | LTE { Lte }
   | GT { Gt }
   | GTE { Gte }
+  | EQUALS { Eq }
   | NEQ { Neq }
   | AND { And }
   | OR { Or }
