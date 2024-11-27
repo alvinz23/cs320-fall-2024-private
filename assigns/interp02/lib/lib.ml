@@ -251,22 +251,11 @@ let type_of expr =
     in
     eval_expr Env.empty expr
   
-    let interp s =
+    let interp (s : string) : (value, error) result =
       match parse s with
-      | None -> Error ParseErr
       | Some prog ->
           let expr = desugar prog in
-          match type_of expr with
-          | Ok _ ->
-              (try
-                 let v = eval expr in
-                 Ok v
-               with
-               | AssertFail -> Error (AssertTyErr BoolTy)
-               | DivByZero -> Error (OpTyErrR (Div, IntTy, IntTy)) 
-               | Failure msg -> Error (UnknownVar msg)) 
-          | Error err -> Error err
-
-          
-    
-  
+          (match type_of expr with
+          | Ok _ -> Ok (eval expr)
+          | Error err -> Error err)
+          |None -> Error ParseErr
