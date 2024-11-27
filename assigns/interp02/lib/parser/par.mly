@@ -42,93 +42,69 @@
 
 %right OR
 %right AND
-%left LT LTE GT GTE NEQ
+%left LT LTE GT GTE EQUALS NEQ
 %left ADD SUB
 %left MUL DIV MOD
+
 
 %start <Utils.prog> prog
 
 %%
 
 prog:
-  | top_lets EOF { $1 }
-;
-
-top_lets:
-  | toplet top_lets { $1 :: $2 }
-  | { [] }
+  | toplet_list = list(toplet) EOF { toplet_list }
 ;
 
 toplet:
-  | LET VAR args COLON ty EQUALS expr
-    { { is_rec = false; name = $2; args = $3; ty = $5; value = $7 } }
-  | LET REC VAR arg args COLON ty EQUALS expr
-    { { is_rec = true; name = $3; args = $4 :: $5; ty = $7; value = $9 } }
-;
-
-args:
-  | arg args { $1 :: $2 }
-  |  { [] }
+  | LET name = VAR args = list(arg) COLON ty = ty EQUALS value = expression1
+    { {is_rec = false; name; args; ty; value} }
+  | LET REC name = VAR first_arg = arg rest_args = list(arg) COLON ty = ty EQUALS value = expression1
+    { {is_rec = true; name; args = first_arg :: rest_args; ty; value} }
 ;
 
 arg:
-  | LPAREN VAR COLON ty RPAREN { ($2, $4) }
+  | LPAREN name = VAR COLON ty_decl = ty RPAREN 
+    { (name, ty_decl) }
 ;
 
 ty:
   | INT { IntTy }
   | BOOL { BoolTy }
   | UNIT { UnitTy }
-  | ty ARROW ty { FunTy($1, $3) }
-  | LPAREN ty RPAREN { $2 }
+  | t1 = ty ARROW t2 = ty { FunTy(t1, t2) }
+  | LPAREN t = ty RPAREN { t }
 ;
 
-expr:
-  | LET VAR args COLON ty EQUALS expr IN expr
-    { SLet { is_rec = false; name = $2; args = $3; ty = $5; value = $7; body = $9 } }
-  | LET REC VAR arg args COLON ty EQUALS expr IN expr
-    { SLet { is_rec = true; name = $3; args = $4 :: $5; ty = $7; value = $9; body = $11 } }
-  | IF expr THEN expr ELSE expr %prec THEN
-    { SIf($2, $4, $6) }
-| FUN first_arg = arg rest_args = list(arg) ARROW body = expr
+expression1:
+  | LET name = VAR args = list(arg) COLON ty_decl = ty EQUALS value = expression1 IN body = expression1
+    { SLet {is_rec = false; name; args; ty = ty_decl; value; body} }
+  | LET REC name = VAR first_arg = arg rest_args = list(arg) COLON ty_decl = ty 
+    EQUALS value = expression1 IN body = expression1
+    { SLet {is_rec = true; name; args = first_arg :: rest_args; ty = ty_decl; value; body} }
+  | IF cond = expression1 THEN then_expression1 = expression1 ELSE else_expression1 = expression1
+    { SIf(cond, then_expression1, else_expression1) }
+  | FUN first_arg = arg rest_args = list(arg) ARROW body = expression1
     { SFun {arg = first_arg; args = rest_args; body} }
-  | expr2 { $1 }
+  | e = expression2 { e }
 ;
 
-expr2:
-  | e1 = expr2 op = bop e2 = expr2 
+expression2:
+  | e1 = expression2 op = bop e2 = expression2 
     { SBop(op, e1, e2) }
-  | ASSERT e = expr3 
+  | ASSERT e = expression3 
     { SAssert(e) }
-  | func = expr3 args = nonempty_list(expr3) 
+  | func = expression3 args = nonempty_list(expression3) 
     { mk_app func args }
-  | e = expr3 { e }
+  | e = expression3 { e }
 ;
 
-expr3:
-  | expr3 AND expr4 { SBop(And, $1, $3) }
-  | expr4 { $1 }
-;
-
-expr4:
-  | expr4 ADD expr5 { SBop(Add, $1, $3) }
-  | expr4 SUB expr5 { SBop(Sub, $1, $3) }
-  | expr5 { $1 }
-;
-
-expr5:
-  | expr5 MUL expr6 { SBop(Mul, $1, $3) }
-  | expr5 DIV expr6 { SBop(Div, $1, $3) }
-  | expr6 { $1 }
-;
-
-expr6:
-  | LPAREN expr RPAREN { $2 }
-  | NUM { SNum($1) }
-  | VAR { SVar($1) }
+expression3:
   | LPAREN RPAREN { SUnit }
   | TRUE { STrue }
   | FALSE { SFalse }
+  | n = NUM { SNum n }
+  | x = VAR { SVar x }
+  | LPAREN e = expression1 RPAREN { e }
 ;
 
 %inline bop:
@@ -141,6 +117,7 @@ expr6:
   | LTE { Lte }
   | GT { Gt }
   | GTE { Gte }
+  | EQUALS { Eq }
   | NEQ { Neq }
   | AND { And }
   | OR { Or }
