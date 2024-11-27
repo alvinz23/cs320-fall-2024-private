@@ -1,6 +1,5 @@
 
 open Utils
-open My_parser
 open Stdlib320
 
 type ty_env = ty Stdlib320.env
@@ -11,10 +10,11 @@ module Env = Stdlib320.Env
 exception AssertFail
 exception DivByZero
 
-let parse s =
-  parse s
 
 
+let parse : string -> prog option = 
+  fun s -> My_parser.parse s 
+  
 let (>>=) r f =
   match r with
   | Ok v -> f v
@@ -90,7 +90,6 @@ and desugar_ty ty =
   | FunTy (t1, t2) -> FunTy (desugar_ty t1, desugar_ty t2)
 
   
-(* type_of function *)
 let type_of expr =
   let rec type_check (gamma : ty_env) (e : expr) : (ty, error) result =
     match e with
@@ -221,7 +220,6 @@ let type_of expr =
            | _ -> failwith "Assert expression is not a boolean")
     and eval_bop op v1 v2 =
       match (op, v1, v2) with
-      (* Integer operations *)
       | (Add, VNum n1, VNum n2) -> VNum (n1 + n2)
       | (Sub, VNum n1, VNum n2) -> VNum (n1 - n2)
       | (Mul, VNum n1, VNum n2) -> VNum (n1 * n2)
@@ -229,17 +227,14 @@ let type_of expr =
           if n2 = 0 then raise DivByZero else VNum (n1 / n2)
       | (Mod, VNum n1, VNum n2) ->
           if n2 = 0 then raise DivByZero else VNum (n1 mod n2)
-      (* Comparison operations *)
       | (Lt, VNum n1, VNum n2) -> VBool (n1 < n2)
       | (Lte, VNum n1, VNum n2) -> VBool (n1 <= n2)
       | (Gt, VNum n1, VNum n2) -> VBool (n1 > n2)
       | (Gte, VNum n1, VNum n2) -> VBool (n1 >= n2)
       | (Eq, VNum n1, VNum n2) -> VBool (n1 = n2)
       | (Neq, VNum n1, VNum n2) -> VBool (n1 <> n2)
-      (* Boolean operations *)
       | (And, VBool b1, VBool b2) -> VBool (b1 && b2)
       | (Or, VBool b1, VBool b2) -> VBool (b1 || b2)
-      (* Invalid cases *)
       | _ -> failwith "Invalid operands for binary operation"
     in
     eval_expr Env.empty expr

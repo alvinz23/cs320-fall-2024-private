@@ -1,10 +1,11 @@
 %{
   open Utils
-  let rec apply func args =
-    match args with
-    | [] -> func
-    | head :: tail -> apply (SApp (func, head)) tail
+  let rec mk_app e es =
+    match es with
+    | [] -> e
+    | h :: t -> mk_app (SApp (e, h)) t
 %}
+
 
 %token <string> VAR
 %token <int> NUM
@@ -51,99 +52,88 @@
 %%
 
 prog:
-  declarations EOF { $1 }
+  toplet_list = list_toplet EOF { toplet_list }
 ;
 
-declarations:
+toplet:
+  | LET name = VAR args = list_arg COLON ty = ty EQUALS value = expr
+    { {is_rec = false; name; args; ty; value} }
+  | LET REC name = VAR first_arg = arg rest_args = list_arg COLON ty = ty EQUALS value = expr
+    { {is_rec = true; name; args = first_arg :: rest_args; ty; value} }
+;
+
+list_toplet:
   { [] }
-| declarations binding { $1 @ [$2] }
+| list_toplet toplet { $1 @ [$2] }
 ;
 
-binding:
-  LET name=VAR params=optional_parameters COLON ty=type_expression EQUALS expr_body=expression {
-    { is_rec = false; name; args = params; ty; value = expr_body }
-  }
-| LET REC name=VAR first_param=parameter additional_params=more_parameters COLON ty=type_expression EQUALS expr_body=expression {
-    { is_rec = true; name; args = first_param :: additional_params; ty; value = expr_body }
-  }
+arg:
+  | LPAREN name = VAR COLON ty_decl = ty RPAREN 
+    { (name, ty_decl) }
 ;
 
-optional_parameters:
+ty:
+  | INT { IntTy }
+  | BOOL { BoolTy }
+  | UNIT { UnitTy }
+  | t1 = ty ARROW t2 = ty { FunTy(t1, t2) }
+  | LPAREN t = ty RPAREN { t }
+;
+
+expr:
+  | LET name = VAR args = list_arg COLON ty_decl = ty EQUALS value = expr IN body = expr
+    { SLet {is_rec = false; name; args = args; ty = ty_decl; value; body} }
+  | LET REC name = VAR first_arg = arg rest_args = list_arg COLON ty_decl = ty 
+    EQUALS value = expr IN body = expr
+    { SLet {is_rec = true; name; args = first_arg :: rest_args; ty = ty_decl; value; body} }
+  | IF cond = expr THEN then_expr = expr ELSE else_expr = expr
+    { SIf(cond, then_expr, else_expr) }
+  | FUN first_arg = arg rest_args = list_arg ARROW body = expr
+    { SFun {arg = first_arg; args = rest_args; body} }
+  | e = expr2 { e }
+;
+
+list_arg:
   { [] }
-| parameter_list { $1 }
+| list_arg arg { $1 @ [$2] }
 ;
 
-parameter_list:
-  parameter { [$1] }
-| parameter_list parameter { $1 @ [$2] }
+expr2:
+  | e1 = expr2 op = bop e2 = expr2 
+    { SBop(op, e1, e2) }
+  | ASSERT e = expr3 
+    { SAssert(e) }
+  | func = expr3 args = nonempty_list_expr3 
+    { mk_app func args }
+  | e = expr3 { e }
 ;
 
-parameter:
-  LPAREN param_name=VAR COLON param_type=type_expression RPAREN { (param_name, param_type) }
+nonempty_list_expr3:
+  expr3 { [$1] }
+| nonempty_list_expr3 expr3 { $1 @ [$2] }
 ;
 
-more_parameters:
-  { [] }
-| more_parameters parameter { $1 @ [$2] }
+expr3:
+  | LPAREN RPAREN { SUnit }
+  | TRUE { STrue }
+  | FALSE { SFalse }
+  | n = NUM { SNum n }
+  | x = VAR { SVar x }
+  | LPAREN e = expr RPAREN { e }
 ;
 
-type_expression:
-  INT { IntTy }
-| BOOL { BoolTy }
-| UNIT { UnitTy }
-| from_ty=type_expression ARROW to_ty=type_expression { FunTy (from_ty, to_ty) }
-| LPAREN inner_ty=type_expression RPAREN { inner_ty }
-;
-
-expression:
-  LET name=VAR params=optional_parameters COLON ty=type_expression EQUALS value=expression IN body=expression {
-    SLet { is_rec = false; name; args = params; ty; value = value; body = body }
-  }
-| LET REC name=VAR first_param=parameter additional_params=more_parameters COLON ty=type_expression EQUALS value=expression IN body=expression {
-    SLet { is_rec = true; name; args = first_param :: additional_params; ty; value = value; body = body }
-  }
-| IF condition=expression THEN then_branch=expression ELSE else_branch=expression {
-    SIf (condition, then_branch, else_branch)
-  }
-| FUN first_param=parameter additional_params=more_parameters ARROW func_body=expression {
-    SFun { arg = first_param; args = additional_params; body = func_body }
-  }
-| expr_lvl1 { $1 }
-;
-
-expr_lvl1:
-  expr_lvl1 operator=binary_operator expr_lvl1 { SBop (operator, $1, $3) }
-| ASSERT expr_lvl2 { SAssert ($2) }
-| func=expr_lvl2 args=expr_arguments { apply func args }
-| expr_lvl2 { $1 }
-;
-
-expr_arguments:
-  expr_lvl2 { [ $1 ] }
-| expr_arguments expr_lvl2 { $1 @ [ $2 ] }
-;
-
-expr_lvl2:
-  LPAREN RPAREN { SUnit }
-| TRUE { STrue }
-| FALSE { SFalse }
-| n=NUM { SNum n }
-| x=VAR { SVar x }
-| LPAREN nested_expr=expression RPAREN { nested_expr }
-;
-
-%inline binary_operator:
-  ADD { Add }
-| SUB { Sub }
-| MUL { Mul }
-| DIV { Div }
-| MOD { Mod }
-| LT { Lt }
-| LTE { Lte }
-| GT { Gt }
-| GTE { Gte }
-| EQUALS { Eq }
-| NEQ { Neq }
-| AND { And }
-| OR { Or }
-;
+%inline bop:
+  | ADD { Add }
+  | SUB { Sub }
+  | MUL { Mul }
+  | DIV { Div }
+  | MOD { Mod }
+  | LT { Lt }
+  | LTE { Lte }
+  | GT { Gt }
+  | GTE { Gte }
+  | EQUALS { Eq }
+  | NEQ { Neq }
+  | AND { And }
+  | OR { Or }
+; 
