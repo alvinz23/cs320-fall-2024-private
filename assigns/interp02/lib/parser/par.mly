@@ -56,7 +56,7 @@ prog:
 
 top_lets:
   | toplet top_lets { $1 :: $2 }
-  | /* empty */ { [] }
+  | { [] }
 ;
 
 toplet:
@@ -68,7 +68,7 @@ toplet:
 
 args:
   | arg args { $1 :: $2 }
-  | /* empty */ { [] }
+  |  { [] }
 ;
 
 arg:

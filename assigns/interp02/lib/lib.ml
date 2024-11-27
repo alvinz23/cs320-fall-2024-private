@@ -29,67 +29,89 @@ let expected_types_of_bop op =
   | And | Or ->
       (BoolTy, BoolTy, BoolTy)
 
-let rec desugar prog =
-  let rec desugar_toplets toplets =
-    match toplets with
-    | [] -> Unit
-    | toplet :: rest ->
-        let desugared_value = desugar_sfexpr (desugar_function toplet.args toplet.value) in
-        let desugared_body = desugar_toplets rest in
-        Let {
-          is_rec = toplet.is_rec;
-          name = toplet.name;
-          ty = desugar_ty toplet.ty;
-          value = desugared_value;
-          body = desugared_body;
-        }
-  in
-  desugar_toplets prog
-
-and desugar_sfexpr expr =
-  match expr with
-  | SUnit -> Unit
-  | STrue -> True
-  | SFalse -> False
-  | SNum n -> Num n
-  | SVar x -> Var x
-  | SIf (e1, e2, e3) -> If (desugar_sfexpr e1, desugar_sfexpr e2, desugar_sfexpr e3)
-  | SBop (op, e1, e2) -> Bop (op, desugar_sfexpr e1, desugar_sfexpr e2)
-  | SAssert e -> Assert (desugar_sfexpr e)
-  | SFun { arg; args; body } ->
-      desugar_fun (arg :: args) body
-  | SApp (e1, e2) -> App (desugar_sfexpr e1, desugar_sfexpr e2)
-  | SLet { is_rec; name; args; ty; value; body } ->
-      let desugared_value = desugar_sfexpr (desugar_function args value) in
-      Let {
-        is_rec;
-        name;
-        ty = desugar_ty ty;
-        value = desugared_value;
-        body = desugar_sfexpr body;
-      }
-
-and desugar_fun args body =
-  match args with
-  | [] -> desugar_sfexpr body
-  | (arg_name, arg_ty) :: rest ->
-      let inner_fun = desugar_fun rest body in
-      Fun (arg_name, desugar_ty arg_ty, inner_fun)
-
-and desugar_function args value =
-  match args with
-  | [] -> value
-  | arg :: rest ->
-      SFun { arg = arg; args = rest; body = value }
-
-and desugar_ty ty =
-  match ty with
-  | IntTy -> IntTy
-  | BoolTy -> BoolTy
-  | UnitTy -> UnitTy
-  | FunTy (t1, t2) -> FunTy (desugar_ty t1, desugar_ty t2)
-
+      
   
+      let desugar : prog -> expr = fun program ->
+  let rec transform_expr (surface_expr : sfexpr) : expr =
+    match surface_expr with
+    | SUnit -> Unit
+    | STrue -> True
+    | SFalse -> False
+    | SNum number -> Num number
+    | SVar variable -> Var variable
+    | SBop (binary_op, left, right) ->
+        Bop (binary_op, transform_expr left, transform_expr right)
+    | SIf (condition, then_branch, else_branch) ->
+        If (transform_expr condition, transform_expr then_branch, transform_expr else_branch)
+    | SAssert assertion_expr -> Assert (transform_expr assertion_expr)
+    | SFun { arg = (arg_name, arg_type); args = []; body } ->
+        Fun (arg_name, arg_type, transform_expr body)
+    | SFun { arg = (arg_name, arg_type); args = args_list; body } ->
+        (match args_list with
+         | [] -> Fun (arg_name, arg_type, transform_expr body)
+         | first_arg :: rest_args ->
+             transform_expr (SFun { arg = first_arg; args = rest_args; body }))
+    | SLet { is_rec = is_recursive; name = binding_name; args = []; ty = binding_type; value; body } ->
+        Let
+          {
+            is_rec = is_recursive;
+            name = binding_name;
+            ty = binding_type;
+            value = transform_expr value;
+            body = transform_expr body;
+          }
+    | SLet { is_rec = is_recursive; name = binding_name; args = binding_args; ty; value; body } ->
+        (match binding_args with
+         | [] -> transform_expr (SLet { is_rec = is_recursive; name = binding_name; args = []; ty; value; body })
+         | first_arg :: rest_args ->
+             Let
+               {
+                 is_rec = is_recursive;
+                 name = binding_name;
+                 ty =
+                   List.fold_right
+                     (fun (_, arg_type) acc -> FunTy (arg_type, acc))
+                     rest_args ty;
+                 value =
+                   transform_expr
+                     (SFun { arg = first_arg; args = rest_args; body = value });
+                 body = transform_expr body;
+               })
+    | SApp (function_expr, argument_expr) ->
+        App (transform_expr function_expr, transform_expr argument_expr)
+  in
+
+  let rec process topLvl =
+    match topLvl with
+    | [] -> Unit
+    | { is_rec = is_recursive; name = binding_name; args = binding_args; ty = binding_type; value } :: remaining_bindings ->
+        (match binding_args with
+         | [] ->
+             Let
+               {
+                 is_rec = is_recursive;
+                 name = binding_name;
+                 ty = binding_type;
+                 value = transform_expr value;
+                 body = process remaining_bindings;
+               }
+         | first_arg :: rest_args ->
+             Let
+               {
+                 is_rec = is_recursive;
+                 name = binding_name;
+                 ty =
+                   List.fold_right
+                     (fun (_, arg_type) acc -> FunTy (arg_type, acc))
+                     binding_args binding_type;
+                 value =
+                   transform_expr
+                     (SFun { arg = first_arg; args = rest_args; body = value });
+                 body = process remaining_bindings;
+               })
+  in
+  process program
+
 let type_of expr =
   let rec type_check (gamma : ty_env) (e : expr) : (ty, error) result =
     match e with
